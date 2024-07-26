@@ -2,7 +2,7 @@
 # Targets
 ################################################################################
 
-PACKAGE_NAME := rust_greedy_set_cover
+PACKAGE_NAME := guessing_game
 
 ## Cargo duild
 .PHONY: build
