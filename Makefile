@@ -1,16 +1,25 @@
+################################################################################
+# Targets
+################################################################################
+
+PACKAGE_NAME := rust_greedy_set_cover
+
+## Cargo duild
+.PHONY: build
+build:
+	cargo build
+
 ## Run ./main
-.PHONY: main
-main:
-	./main
+.PHONY: debug
+debug:
+	./target/debug/${PACKAGE_NAME}
 
-## Run rustc main.rs
-.PHONY: rc
-rc:
-	rustc main.rs	
+## Build and debug
+run: build debug
 
-#################################################################################
-# Self Documenting Commands #
-#################################################################################
+################################################################################
+# Self Documenting Commands
+################################################################################
 .DEFAULT_GOAL := help
 
 define PRINT_HELP_PYSCRIPT
