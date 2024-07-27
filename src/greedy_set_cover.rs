@@ -1,6 +1,7 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, hash::RandomState};
 pub type Set = HashSet<u32>;
 pub type SetVec = Vec<Set>;
+use std::collections::hash_set::Intersection;
 
 fn make_universe(sets: &SetVec) -> Set {
     let universe: Set = sets.iter().flatten().cloned().collect();
@@ -32,20 +33,20 @@ pub fn greedy_set_cover_0(sets: &SetVec) -> SetVec {
         // Find biggest intersection of uncovered elements and each set
         let mut len_biggest: usize = 0;
         let mut i_biggest: usize = 0;
-
+        let mut intersection: Intersection<u32, RandomState>;
         for i in 0..n_sets {
-            let intersection: Set = uncovered_elements.intersection(&sets[i]).cloned().collect();
-            let len_intersection = intersection.len();
+            intersection = uncovered_elements.intersection(&sets[i]);
+            let len_intersection = intersection.count();
             if len_intersection > len_biggest {
                 i_biggest = i;
                 len_biggest = len_intersection;
             }
         }
         let biggest_set: Set = sets[i_biggest].clone();
+        // Remove covered elements from "uncovered"
         uncovered_elements.retain(|&x| !&biggest_set.contains(&x));
 
         covering_sets.push(biggest_set);
-        // Remove covered elements from "uncovered"
     }
 
     covering_sets
