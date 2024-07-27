@@ -2,4 +2,4 @@
 
 Learning rust by porting RcppGreedySetCover to rust.
 
-
+Main source for now: [this book]([this book](https://doc.rust-lang.org/book/title-page.html)).
