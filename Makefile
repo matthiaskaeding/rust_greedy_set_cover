@@ -2,7 +2,7 @@
 # Targets
 ################################################################################
 
-PACKAGE_NAME := guessing_game
+PACKAGE_NAME := set_cover
 
 ## Cargo duild
 .PHONY: build
