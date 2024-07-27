@@ -3,13 +3,8 @@ pub type Set = HashSet<u32>;
 pub type SetVec = Vec<Set>;
 
 fn make_universe(sets: &SetVec) -> Set {
-    let mut universe: Set = Set::new();
-    for set in sets.iter() {
-        for &element in set.iter() {
-            universe.insert(element);
-        }
-    }
-    return universe;
+    let universe: Set = sets.iter().flatten().cloned().collect();
+    universe
 }
 
 /// First greedy set cover algorithm.
@@ -71,6 +66,18 @@ fn test_make_universe() {
     assert!(universe.contains(&800));
     let desired_length: usize = 6;
     assert_eq!(universe.len(), desired_length);
+
+    // Empty set
+    let mut sets: SetVec = SetVec::new();
+    assert_eq!(make_universe(&sets).len(), 0);
+    // Some more
+    sets.push(Set::from([1, 2, 3]));
+    sets.push(Set::from([2, 3, 4, 5, 6, 7, 8]));
+    sets.push(Set::from([999]));
+    assert_eq!(
+        make_universe(&sets),
+        Set::from([1, 2, 3, 4, 5, 6, 7, 8, 999])
+    )
 }
 
 #[cfg(test)]
