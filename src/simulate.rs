@@ -3,11 +3,56 @@ use std::{collections::HashSet, usize};
 pub type Set = HashSet<u32>;
 pub type SetCollection = Vec<Set>;
 
+/// Generates a random integer between 0 and `max` (inclusive).
+///
+/// This function uses the thread-local random number generator.
+///
+/// # Arguments
+///
+/// * `max` - The upper bound for the random number generation (inclusive).
+///
+/// # Returns
+///
+/// A random `u32` between 0 and `max`, inclusive.
+///
+/// # Examples
+///
+/// ```
+/// let random_number = draw_single_int(10);
+/// assert!(random_number <= 10);
+/// ```
 fn draw_single_int(max: u32) -> u32 {
     let mut rng = rand::thread_rng();
     rng.gen_range(0..=max)
 }
 
+/// Generates a collection of sets, each containing random elements.
+///
+/// This function creates a specified number of sets and populates them
+/// with random elements. The total number of elements across all sets
+/// is controlled by the `n_elements` parameter.
+///
+/// # Arguments
+///
+/// * `n_sets` - The number of sets to create.
+/// * `n_elements` - The total number of elements to distribute across all sets.
+/// * `max_elements` - The maximum value for any element in the sets.
+///
+/// # Returns
+///
+/// A `SetCollection` (Vec<HashSet<u32>>) containing the generated sets.
+///
+/// # Examples
+///
+/// ```
+/// let collection = draw_set_collection(3, 10, 100);
+/// assert_eq!(collection.len(), 3);
+/// ```
+///
+/// # Note
+///
+/// The distribution of elements across sets is random. Some sets may
+/// end up with more elements than others, and some may be empty.
 pub fn draw_set_collection(n_sets: u32, n_elements: usize, max_elements: u32) -> SetCollection {
     let mut sets: SetCollection = vec![Set::new(); n_sets as usize];
     for _ in 0..n_elements {
