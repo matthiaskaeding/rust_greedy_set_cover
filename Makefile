@@ -22,6 +22,8 @@ test:
 ## Build and debug
 run: build debug
 
+build-test: build test
+
 
 ################################################################################
 # Self Documenting Commands

@@ -1,7 +1,7 @@
+#[cfg(test)]
+use crate::greedy_set_cover::{Set, SetVec};
+#[cfg(test)]
 use rand::Rng;
-use std::{collections::HashSet, usize};
-pub type Set = HashSet<u32>;
-pub type SetCollection = Vec<Set>;
 
 /// Generates a random integer between 0 and `max` (inclusive).
 ///
@@ -21,6 +21,7 @@ pub type SetCollection = Vec<Set>;
 /// let random_number = draw_single_int(10);
 /// assert!(random_number <= 10);
 /// ```
+#[cfg(test)]
 fn draw_single_int(max: u32) -> u32 {
     let mut rng = rand::thread_rng();
     rng.gen_range(0..=max)
@@ -40,7 +41,7 @@ fn draw_single_int(max: u32) -> u32 {
 ///
 /// # Returns
 ///
-/// A `SetCollection` (Vec<HashSet<u32>>) containing the generated sets.
+/// A `SetVec` (Vec<HashSet<u32>>) containing the generated sets.
 ///
 /// # Examples
 ///
@@ -53,8 +54,9 @@ fn draw_single_int(max: u32) -> u32 {
 ///
 /// The distribution of elements across sets is random. Some sets may
 /// end up with more elements than others, and some may be empty.
-pub fn draw_set_collection(n_sets: u32, n_elements: usize, max_elements: u32) -> SetCollection {
-    let mut sets: SetCollection = vec![Set::new(); n_sets as usize];
+#[cfg(test)]
+pub fn draw_set_vec(n_sets: u32, n_elements: usize, max_elements: u32) -> SetVec {
+    let mut sets: SetVec = vec![Set::new(); n_sets as usize];
     for _ in 0..n_elements {
         let element = draw_single_int(max_elements);
         let i_set = draw_single_int(n_sets - 1) as usize;
@@ -93,7 +95,7 @@ mod tests {
         let n_sets = 5;
         let n_elements = 20;
         let max_elements = 100;
-        let result = draw_set_collection(n_sets, n_elements, max_elements);
+        let result = draw_set_vec(n_sets, n_elements, max_elements);
         assert_eq!(
             result.len(),
             n_sets as usize,
@@ -106,7 +108,7 @@ mod tests {
         let n_sets = 3;
         let n_elements = 50;
         let max_elements = 30;
-        let result = draw_set_collection(n_sets, n_elements, max_elements);
+        let result = draw_set_vec(n_sets, n_elements, max_elements);
         for set in result {
             for &element in set.iter() {
                 assert!(
@@ -122,7 +124,7 @@ mod tests {
         let n_sets = 4;
         let n_elements = 100;
         let max_elements = 200;
-        let result = draw_set_collection(n_sets, n_elements, max_elements);
+        let result = draw_set_vec(n_sets, n_elements, max_elements);
         let mut n_counted_elements: u32 = 0;
         for set in &result {
             for _ in set.iter() {
