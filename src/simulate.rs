@@ -26,3 +26,42 @@ pub fn draw_vector(n: usize, max: i32) -> Vec<i32> {
 
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_draw_vector() {
+        let n = 100;
+        let max = 50;
+        let result = draw_vector(n, max);
+
+        // Test 1: Check if the vector has the correct length
+        assert_eq!(result.len(), n, "Vector length should be {}", n);
+
+        // Test 2: Check if all elements are within the correct range
+        for &value in &result {
+            assert!(
+                value >= 0 && value < max,
+                "Value {} is out of range [0, {})",
+                value,
+                max
+            );
+        }
+
+        // Test 3: Check if the vector contains at least some variation
+        let unique_values: HashSet<i32> = result.iter().cloned().collect();
+        assert!(
+            unique_values.len() > 1,
+            "Vector should contain varied values"
+        );
+
+        // Test 4: Check if the function produces different results on subsequent calls
+        let another_result = draw_vector(n, max);
+        assert_ne!(
+            result, another_result,
+            "Subsequent calls should produce different vectors"
+        );
+    }
+}
