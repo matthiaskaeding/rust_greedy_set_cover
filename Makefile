@@ -14,8 +14,14 @@ build:
 debug:
 	./target/debug/${PACKAGE_NAME}
 
+## Run tests
+.PHONY: test
+test: 
+	cargo test
+
 ## Build and debug
 run: build debug
+
 
 ################################################################################
 # Self Documenting Commands
