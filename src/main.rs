@@ -1,18 +1,22 @@
+mod greedy_set_cover;
 mod simulate;
 
-use crate::simulate::{draw_set_collection, SetCollection};
+use crate::greedy_set_cover::{greedy_set_cover_0, Set, SetVec};
 
 fn main() {
-    let n_sets: u32 = 10;
-    let n_elements: usize = 50;
-    let max_elements: u32 = 100;
-    let setcollection: SetCollection = draw_set_collection(n_sets, n_elements, max_elements);
+    let mut sets: SetVec = SetVec::new();
+    sets.push(Set::from([1, 2]));
+    sets.push(Set::from([1, 2, 3]));
+    sets.push(Set::from([4, 5]));
+    sets.push(Set::from([6, 7, 8]));
+    sets.push(Set::from([3]));
 
-    for v in setcollection[0].iter() {
-        println!("{v}")
-    }
-    println!("\n");
-    for v in setcollection[1].iter() {
-        println!("{v}")
+    let set_cover = greedy_set_cover_0(&sets);
+    let len_set_cover = set_cover.len();
+    println!("Set cover achieved by {len_set_cover} sets");
+    for (i, set) in set_cover.iter().enumerate() {
+        for el in set.iter() {
+            println!("Set {i} contains {el}");
+        }
     }
 }
