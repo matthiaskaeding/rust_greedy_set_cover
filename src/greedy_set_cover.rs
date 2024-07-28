@@ -1,4 +1,4 @@
-use std::{collections::HashSet, hash::RandomState};
+use std::{collections::HashMap, collections::HashSet, hash::RandomState};
 pub type Set = HashSet<u32>;
 pub type SetVec = Vec<Set>;
 use std::collections::hash_set::Intersection;
@@ -50,6 +50,20 @@ pub fn greedy_set_cover_0(sets: &SetVec) -> SetVec {
     }
 
     covering_sets
+}
+
+// Second version, closer to RcppGreedySetCover implementation
+// Here we map every element to the sets. Then when we cover an element,
+// we can remove that from the mapping
+
+fn map_elements_to_sets(sets: &SetVec) -> HashMap<u32, Vec<usize>> {
+    let mut el_map: HashMap<u32, Vec<usize>> = HashMap::new();
+    for (i_set, set) in sets.iter().enumerate() {
+        for &el in set.iter() {
+            el_map.entry(el).or_default().push(i_set);
+        }
+    }
+    el_map
 }
 
 #[test]
@@ -207,5 +221,71 @@ mod tests {
         let set_vec = draw_set_vec(200, 1000, 200);
         let set_cover: Vec<HashSet<u32>> = greedy_set_cover_0(&set_vec);
         assert_eq!(make_universe(&set_vec), make_universe(&set_cover));
+    }
+
+    #[test]
+    fn test_map_elements_to_sets() {
+        let mut sets: SetVec = SetVec::new();
+        sets.push(Set::from([1, 2, 3]));
+        sets.push(Set::from([2, 3, 4]));
+        sets.push(Set::from([3, 4, 5]));
+        sets.push(Set::from([5, 6, 7]));
+        let mp = map_elements_to_sets(&sets);
+
+        assert_eq!(mp.get(&1), Some(&vec![0]));
+        assert_eq!(mp.get(&2), Some(&vec![0, 1]));
+        assert_eq!(mp.get(&3), Some(&vec![0, 1, 2]));
+        assert_eq!(mp.get(&4), Some(&vec![1, 2]));
+        assert_eq!(mp.get(&5), Some(&vec![2, 3]));
+        assert_eq!(mp.get(&6), Some(&vec![3]));
+        assert_eq!(mp.get(&7), Some(&vec![3]));
+    }
+
+    #[test]
+    fn test_map_elements_to_sets_with_empty_set() {
+        let mut sets: SetVec = SetVec::new();
+        sets.push(Set::from([1, 2]));
+        sets.push(Set::new()); // Empty set
+        sets.push(Set::from([2, 3]));
+        let mp = map_elements_to_sets(&sets);
+
+        assert_eq!(mp.get(&1), Some(&vec![0]));
+        assert_eq!(mp.get(&2), Some(&vec![0, 2]));
+        assert_eq!(mp.get(&3), Some(&vec![2]));
+        assert_eq!(mp.get(&4), None);
+    }
+
+    #[test]
+    fn test_map_elements_to_sets_single_element() {
+        let mut sets: SetVec = SetVec::new();
+        sets.push(Set::from([1]));
+        sets.push(Set::from([1]));
+        sets.push(Set::from([2]));
+        let mp = map_elements_to_sets(&sets);
+
+        assert_eq!(mp.get(&1), Some(&vec![0, 1]));
+        assert_eq!(mp.get(&2), Some(&vec![2]));
+        assert_eq!(mp.get(&3), None);
+    }
+
+    #[test]
+    fn test_map_elements_to_sets_large_numbers() {
+        let mut sets: SetVec = SetVec::new();
+        sets.push(Set::from([1000000, 2000000]));
+        sets.push(Set::from([2000000, 3000000]));
+        let mp = map_elements_to_sets(&sets);
+
+        assert_eq!(mp.get(&1000000), Some(&vec![0]));
+        assert_eq!(mp.get(&2000000), Some(&vec![0, 1]));
+        assert_eq!(mp.get(&3000000), Some(&vec![1]));
+        assert_eq!(mp.get(&4000000), None);
+    }
+
+    #[test]
+    fn test_map_elements_to_sets_all_empty() {
+        let sets: SetVec = vec![Set::new(), Set::new(), Set::new()];
+        let mp = map_elements_to_sets(&sets);
+
+        assert!(mp.is_empty());
     }
 }
