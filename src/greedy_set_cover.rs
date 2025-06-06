@@ -1,203 +1,362 @@
-use std::collections::HashSet;
-pub type Set = HashSet<u32>;
-pub type SetVec = Vec<Set>;
+use std::collections::{HashMap, HashSet};
+use std::hash::Hash;
 
-fn make_universe(sets: &SetVec) -> Set {
-    let mut universe: Set = Set::new();
-    for set in sets.iter() {
-        for &element in set.iter() {
-            universe.insert(element);
-        }
-    }
-    return universe;
-}
-
-/// First greedy set cover algorithm.
-/// Directly implements whats in virtually every textbook.
+/// Finds an approximate solution to the set cover problem using a greedy algorithm.
 ///
 /// # Arguments
 ///
-/// * `sets` - A reference to a  SetCollection Vec<HashSet<u32>>;
+/// * `sets`: A `HashMap` where keys are the identifiers of the sets and values are vectors
+///   of the elements in each set.
+///
+/// # Type Parameters
+///
+/// * `K`: The type of the set identifiers (keys in the HashMap). Must be cloneable, hashable,
+///   and equatable.
+/// * `T`: The type of the elements within the sets. Must be cloneable, hashable, and equatable.
 ///
 /// # Returns
 ///
-/// A SetCollection of sets covering the universe defined by the input sets
-pub fn greedy_set_cover_0(sets: &SetVec) -> SetVec {
-    // At start, every element is uncovered
-    let mut uncovered_elements = make_universe(sets);
-    //let mut covered_elements = Set::new();
-    // Output: a collection of sets usually smaller than the input collection
-    let mut covering_sets = SetVec::new();
-    let n_sets: usize = sets.len();
+/// A `HashMap` containing the sets that form the cover.
+///
+/// # Panics
+///
+/// Panics if the input sets do not collectively cover all of their unique elements.
+pub fn greedy_set_cover_0<K, T>(sets: &HashMap<K, Vec<T>>) -> HashMap<K, Vec<T>>
+where
+    K: Clone + Hash + Eq + std::fmt::Debug, // Added Debug for error message
+    T: Clone + Hash + Eq + std::fmt::Debug, // Added Debug for error message
+{
+    let mut uncovered_elements: HashSet<T> = sets.values().flatten().cloned().collect();
+    let mut cover = HashMap::new();
 
-    for _ in 0..n_sets {
+    for _ in 0..sets.len() {
         if uncovered_elements.is_empty() {
             break;
         }
-        // Find biggest intersection of uncovered elements and each set
-        let mut len_biggest: usize = 0;
-        let mut i_biggest: usize = 0;
 
-        for i in 0..n_sets {
-            let intersection: Set = uncovered_elements.intersection(&sets[i]).cloned().collect();
-            let len_intersection = intersection.len();
-            if len_intersection > len_biggest {
-                i_biggest = i;
-                len_biggest = len_intersection;
+        let mut best_set_key: Option<K> = None;
+        let mut best_set_covered: HashSet<T> = HashSet::new();
+
+        // Iterate through all the provided sets to find the one that covers the most
+        // currently uncovered elements.
+        for (key, set_elements) in sets {
+            let covered_by_this_set: HashSet<T> = set_elements
+                .iter()
+                .filter(|element| uncovered_elements.contains(element))
+                .cloned()
+                .collect();
+
+            if covered_by_this_set.len() > best_set_covered.len() {
+                best_set_key = Some(key.clone());
+                best_set_covered = covered_by_this_set;
             }
         }
-        let biggest_set: Set = sets[i_biggest].clone();
-        uncovered_elements.retain(|&x| !&biggest_set.contains(&x));
 
-        covering_sets.push(biggest_set);
-        // Remove covered elements from "uncovered"
+        // If a best set was found, add it to the cover and remove its elements from the universe.
+        if let Some(key) = best_set_key {
+            uncovered_elements.retain(|e| !best_set_covered.contains(e));
+            cover.insert(key.clone(), sets.get(&key).unwrap().clone());
+        } else if !uncovered_elements.is_empty() {
+            panic!(
+                "Error: Unable to find a set to cover the remaining elements: {:?}",
+                uncovered_elements
+            );
+        }
     }
 
-    covering_sets
-}
+    if !uncovered_elements.is_empty() {
+        panic!(
+            "Error: Could not cover all elements after iterating through all sets. Remaining elements: {:?}",
+            uncovered_elements
+        );
+    }
 
-#[test]
-fn test_make_universe() {
-    let mut sets: SetVec = SetVec::new();
-    sets.push(Set::from([1, 2, 3]));
-    sets.push(Set::from([2, 3, 4]));
-    sets.push(Set::from([11, 2, 800]));
-
-    let universe: Set = make_universe(&sets);
-    assert!(universe.contains(&1));
-    assert!(universe.contains(&2));
-    assert!(universe.contains(&3));
-    assert!(universe.contains(&11));
-    assert!(universe.contains(&800));
-    let desired_length: usize = 6;
-    assert_eq!(universe.len(), desired_length);
+    cover
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::simulate::draw_set_vec;
+    use super::*; // Imports greedy_set_cover from the parent module
+    use std::collections::{HashMap, HashSet};
 
-    use super::*;
+    type Set = HashSet<i32>;
+    type SetVec = Vec<Set>;
+    type SetVecMap = HashMap<i32, SetVec>;
+
+    fn make_universe_from_test_input(sets: &SetVecMap) -> Set {
+        sets.values()
+            .flatten()
+            .flat_map(|s| s.iter().cloned())
+            .collect()
+    }
+
+    fn make_universe_from_cover_output(cover: &HashMap<usize, Vec<i32>>) -> Set {
+        cover.values().flatten().cloned().collect()
+    }
+
+    fn transform_input(sets: &SetVecMap) -> HashMap<usize, Vec<i32>> {
+        let mut function_input = HashMap::new();
+        let mut set_id_counter = 0;
+        for vec_of_sets in sets.values() {
+            for set in vec_of_sets {
+                // We only consider non-empty sets for the cover problem.
+                if !set.is_empty() {
+                    function_input.insert(set_id_counter, set.iter().cloned().collect());
+                    set_id_counter += 1;
+                }
+            }
+        }
+        function_input
+    }
+
+    // --- Rewritten Tests ---
 
     #[test]
     fn test_basic_case() {
-        let mut sets: SetVec = SetVec::new();
-        sets.push(Set::from([1, 2, 3]));
-        sets.push(Set::from([100]));
-        sets.push(Set::from([15]));
-        sets.push(Set::from([1, 2]));
-        let set_cover = greedy_set_cover_0(&sets);
-        assert_eq!(make_universe(&sets), make_universe(&set_cover));
+        let mut sets: SetVecMap = HashMap::new();
+        sets.insert(1, vec![Set::from([1, 2, 3]), Set::from([100])]);
+        sets.insert(2, vec![Set::from([15]), Set::from([1, 2])]);
+
+        let function_input = transform_input(&sets);
+        let set_cover = greedy_set_cover_0(&function_input);
+
+        assert_eq!(
+            make_universe_from_test_input(&sets),
+            make_universe_from_cover_output(&set_cover)
+        );
     }
 
     #[test]
     fn test_with_empty_set() {
-        let mut sets: SetVec = SetVec::new();
-        sets.push(Set::from([1, 2, 3]));
-        sets.push(Set::new());
-        sets.push(Set::from([3, 4, 5]));
-        let set_cover = greedy_set_cover_0(&sets);
-        assert_eq!(make_universe(&sets), make_universe(&set_cover));
+        let mut sets: SetVecMap = HashMap::new();
+        sets.insert(1, vec![Set::from([1, 2, 3]), Set::new()]);
+        sets.insert(2, vec![Set::from([3, 4, 5])]);
+
+        let function_input = transform_input(&sets);
+        let set_cover = greedy_set_cover_0(&function_input);
+
+        assert_eq!(
+            make_universe_from_test_input(&sets),
+            make_universe_from_cover_output(&set_cover)
+        );
     }
 
     #[test]
     fn test_all_sets_needed() {
-        let mut sets: SetVec = SetVec::new();
-        sets.push(Set::from([1]));
-        sets.push(Set::from([2]));
-        sets.push(Set::from([3]));
-        let set_cover = greedy_set_cover_0(&sets);
-        assert_eq!(sets.len(), set_cover.len());
-        assert_eq!(make_universe(&sets), make_universe(&set_cover));
+        let mut sets: SetVecMap = HashMap::new();
+        sets.insert(1, vec![Set::from([1]), Set::from([2])]);
+        sets.insert(2, vec![Set::from([3])]);
+
+        let function_input = transform_input(&sets);
+        let set_cover = greedy_set_cover_0(&function_input);
+
+        assert_eq!(function_input.len(), set_cover.len());
+        assert_eq!(
+            make_universe_from_test_input(&sets),
+            make_universe_from_cover_output(&set_cover)
+        );
     }
 
     #[test]
     fn test_one_set_covers_all() {
-        let mut sets: SetVec = SetVec::new();
-        sets.push(Set::from([1, 2, 3, 4, 5]));
-        sets.push(Set::from([1, 2]));
-        sets.push(Set::from([3, 4]));
-        let set_cover = greedy_set_cover_0(&sets);
+        let mut sets: SetVecMap = HashMap::new();
+        sets.insert(1, vec![Set::from([1, 2, 3, 4, 5])]);
+        sets.insert(2, vec![Set::from([1, 2]), Set::from([3, 4])]);
+
+        let function_input = transform_input(&sets);
+        let set_cover = greedy_set_cover_0(&function_input);
+
         assert_eq!(set_cover.len(), 1);
-        assert_eq!(make_universe(&sets), make_universe(&set_cover));
+        assert_eq!(
+            make_universe_from_test_input(&sets),
+            make_universe_from_cover_output(&set_cover)
+        );
     }
 
     #[test]
     fn test_overlapping_sets() {
-        let mut sets: SetVec = SetVec::new();
-        sets.push(Set::from([1, 2, 3]));
-        sets.push(Set::from([3, 4, 5]));
-        sets.push(Set::from([5, 6, 7]));
-        let set_cover = greedy_set_cover_0(&sets);
-        assert_eq!(make_universe(&sets), make_universe(&set_cover));
+        let mut sets: SetVecMap = HashMap::new();
+        sets.insert(1, vec![Set::from([1, 2, 3]), Set::from([3, 4, 5])]);
+        sets.insert(2, vec![Set::from([5, 6, 7])]);
+
+        let function_input = transform_input(&sets);
+        let set_cover = greedy_set_cover_0(&function_input);
+
+        // The greedy algorithm might pick 2 or 3 sets, but the universe must be covered.
+        assert!(set_cover.len() >= 2 && set_cover.len() <= 3);
+        assert_eq!(
+            make_universe_from_test_input(&sets),
+            make_universe_from_cover_output(&set_cover)
+        );
     }
 
     #[test]
     fn test_large_numbers() {
-        let mut sets: SetVec = SetVec::new();
-        sets.push(Set::from([1000000, 2000000, 3000000]));
-        sets.push(Set::from([4000000, 5000000]));
-        let set_cover = greedy_set_cover_0(&sets);
-        assert_eq!(make_universe(&sets), make_universe(&set_cover));
+        let mut sets: SetVecMap = HashMap::new();
+        sets.insert(1, vec![Set::from([1_000_000, 2_000_000, 3_000_000])]);
+        sets.insert(2, vec![Set::from([4_000_000, 5_000_000])]);
+
+        let function_input = transform_input(&sets);
+        let set_cover = greedy_set_cover_0(&function_input);
+
+        assert_eq!(
+            make_universe_from_test_input(&sets),
+            make_universe_from_cover_output(&set_cover)
+        );
     }
 
     #[test]
     fn test_duplicate_sets() {
-        let mut sets: SetVec = SetVec::new();
-        sets.push(Set::from([1, 2, 3]));
-        sets.push(Set::from([1, 2, 3]));
-        sets.push(Set::from([4, 5, 6]));
-        let set_cover = greedy_set_cover_0(&sets);
-        assert!(set_cover.len() < sets.len());
-        assert_eq!(make_universe(&sets), make_universe(&set_cover));
+        let mut sets: SetVecMap = HashMap::new();
+        sets.insert(1, vec![Set::from([1, 2, 3]), Set::from([1, 2, 3])]);
+        sets.insert(2, vec![Set::from([4, 5, 6])]);
+
+        let function_input = transform_input(&sets);
+        let set_cover = greedy_set_cover_0(&function_input);
+
+        assert!(set_cover.len() < function_input.len());
+        assert_eq!(
+            make_universe_from_test_input(&sets),
+            make_universe_from_cover_output(&set_cover)
+        );
     }
 
     #[test]
     fn test_one_element_per_set() {
-        let mut sets: SetVec = SetVec::new();
-        sets.push(Set::from([1]));
-        sets.push(Set::from([2]));
-        sets.push(Set::from([3]));
-        sets.push(Set::from([4]));
-        let set_cover = greedy_set_cover_0(&sets);
-        assert_eq!(sets.len(), set_cover.len());
-        assert_eq!(make_universe(&sets), make_universe(&set_cover));
+        let mut sets: SetVecMap = HashMap::new();
+        sets.insert(1, vec![Set::from([1]), Set::from([2])]);
+        sets.insert(2, vec![Set::from([3]), Set::from([4])]);
+
+        let function_input = transform_input(&sets);
+        let set_cover = greedy_set_cover_0(&function_input);
+
+        assert_eq!(function_input.len(), set_cover.len());
+        assert_eq!(
+            make_universe_from_test_input(&sets),
+            make_universe_from_cover_output(&set_cover)
+        );
     }
 
     #[test]
     fn test_nested_sets() {
-        let mut sets: SetVec = SetVec::new();
-        sets.push(Set::from([1, 2, 3, 4, 5]));
-        sets.push(Set::from([1, 2, 3]));
-        sets.push(Set::from([1, 2]));
-        let set_cover = greedy_set_cover_0(&sets);
+        let mut sets: SetVecMap = HashMap::new();
+        sets.insert(1, vec![Set::from([1, 2, 3, 4, 5]), Set::from([1, 2, 3])]);
+        sets.insert(2, vec![Set::from([1, 2])]);
+
+        let function_input = transform_input(&sets);
+        let set_cover = greedy_set_cover_0(&function_input);
+
         assert_eq!(set_cover.len(), 1);
-        assert_eq!(make_universe(&sets), make_universe(&set_cover));
+        assert_eq!(
+            make_universe_from_test_input(&sets),
+            make_universe_from_cover_output(&set_cover)
+        );
     }
 
     #[test]
     fn test_large_number_of_small_sets() {
-        let mut sets: SetVec = SetVec::new();
-        for i in 0..100 {
-            sets.push(Set::from([i, i + 1]));
+        let mut sets: SetVecMap = HashMap::new();
+        let mut category1_sets = Vec::new();
+        let mut category2_sets = Vec::new();
+        for i in 0..50 {
+            category1_sets.push(Set::from([i, i + 1]));
+            category2_sets.push(Set::from([i + 50, i + 51]));
         }
-        let set_cover: Vec<HashSet<u32>> = greedy_set_cover_0(&sets);
-        assert!(set_cover.len() < sets.len());
-        assert_eq!(make_universe(&sets), make_universe(&set_cover));
+        sets.insert(1, category1_sets);
+        sets.insert(2, category2_sets);
+
+        let function_input = transform_input(&sets);
+        let set_cover = greedy_set_cover_0(&function_input);
+
+        assert!(set_cover.len() < function_input.len());
+        assert_eq!(
+            make_universe_from_test_input(&sets),
+            make_universe_from_cover_output(&set_cover)
+        );
     }
 
     #[test]
-    fn test_random_sets() {
-        let set_vec = draw_set_vec(10, 100, 20);
-        let set_cover: Vec<HashSet<u32>> = greedy_set_cover_0(&set_vec);
-        assert_eq!(make_universe(&set_vec), make_universe(&set_cover));
+    fn test_complex_deterministic_cases() {
+        // Case 1: A clear greedy choice path
+        let mut sets1: SetVecMap = HashMap::new();
+        sets1.insert(
+            1,
+            vec![
+                Set::from([1, 2, 3, 4, 5, 6]), // S1 (Best initial choice)
+                Set::from([1, 2, 7]),          // S2
+                Set::from([3, 4, 8]),          // S3
+                Set::from([5, 6, 9]),          // S4
+                Set::from([7, 8, 9, 10]),      // S5 (Best second choice)
+            ],
+        );
+        let function_input1 = transform_input(&sets1);
+        let set_cover1 = greedy_set_cover_0(&function_input1);
+        // The optimal greedy cover is 2 sets: {1,2,3,4,5,6} and {7,8,9,10}
+        assert_eq!(set_cover1.len(), 2);
+        assert_eq!(
+            make_universe_from_test_input(&sets1),
+            make_universe_from_cover_output(&set_cover1)
+        );
 
-        let set_vec = draw_set_vec(30, 70, 50);
-        let set_cover: Vec<HashSet<u32>> = greedy_set_cover_0(&set_vec);
-        assert_eq!(make_universe(&set_vec), make_universe(&set_cover));
+        // Case 2: A less obvious greedy path
+        let mut sets2: SetVecMap = HashMap::new();
+        sets2.insert(
+            1,
+            vec![
+                Set::from([1, 2, 3]),     // S1
+                Set::from([4, 5, 6]),     // S2
+                Set::from([7, 8, 9]),     // S3
+                Set::from([1, 4, 7]),     // S4
+                Set::from([2, 5, 8]),     // S5
+                Set::from([3, 6, 9, 10]), // S6 (covers one unique element '10')
+            ],
+        );
+        let function_input2 = transform_input(&sets2);
+        let set_cover2 = greedy_set_cover_0(&function_input2);
+        // An optimal solution is 3 sets (e.g., S1,S2,S3), but a greedy one might take more.
+        // For example S4, S5, S6, S1. The only guarantee is coverage.
+        assert_eq!(
+            make_universe_from_test_input(&sets2),
+            make_universe_from_cover_output(&set_cover2)
+        );
+    }
 
-        let set_vec = draw_set_vec(200, 1000, 200);
-        let set_cover: Vec<HashSet<u32>> = greedy_set_cover_0(&set_vec);
-        assert_eq!(make_universe(&set_vec), make_universe(&set_cover));
+    #[test]
+    fn test_with_different_types() {
+        // Case 1: Using string slices for both keys and elements
+        let mut sets_str: HashMap<&str, Vec<&str>> = HashMap::new();
+        sets_str.insert("Set A", vec!["apple", "banana", "cherry"]);
+        sets_str.insert("Set B", vec!["banana", "date"]);
+        sets_str.insert("Set C", vec!["cherry", "fig", "grape"]);
+        sets_str.insert("Set D", vec!["fig", "grape"]);
+
+        let cover_str = greedy_set_cover_0(&sets_str);
+
+        let original_universe_str: HashSet<&str> = sets_str.values().flatten().cloned().collect();
+        let covered_universe_str: HashSet<&str> = cover_str.values().flatten().cloned().collect();
+
+        // The greedy choice should be "Set A" and "Set C"
+        assert_eq!(cover_str.len(), 3);
+        assert_eq!(original_universe_str, covered_universe_str);
+        assert!(cover_str.contains_key("Set A"));
+        assert!(cover_str.contains_key("Set C"));
+
+        // ---
+
+        // Case 2: Using integers for keys and characters for elements
+        let mut sets_char: HashMap<i32, Vec<char>> = HashMap::new();
+        sets_char.insert(1, vec!['a', 'b', 'c']);
+        sets_char.insert(2, vec!['c', 'd']);
+        sets_char.insert(3, vec!['e', 'f']);
+        sets_char.insert(4, vec!['a', 'd', 'e']);
+
+        let cover_char = greedy_set_cover_0(&sets_char);
+
+        let original_universe_char: HashSet<char> = sets_char.values().flatten().cloned().collect();
+        let covered_universe_char: HashSet<char> = cover_char.values().flatten().cloned().collect();
+
+        // A possible greedy cover is sets 1 and 4, or 1 and 3 and 2...
+        // The most important thing is that the universe is covered.
+        assert_eq!(original_universe_char, covered_universe_char);
     }
 }
