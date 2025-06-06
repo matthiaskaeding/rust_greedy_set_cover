@@ -320,4 +320,43 @@ mod tests {
             make_universe_from_cover_output(&set_cover2)
         );
     }
+
+    #[test]
+    fn test_with_different_types() {
+        // Case 1: Using string slices for both keys and elements
+        let mut sets_str: HashMap<&str, Vec<&str>> = HashMap::new();
+        sets_str.insert("Set A", vec!["apple", "banana", "cherry"]);
+        sets_str.insert("Set B", vec!["banana", "date"]);
+        sets_str.insert("Set C", vec!["cherry", "fig", "grape"]);
+        sets_str.insert("Set D", vec!["fig", "grape"]);
+
+        let cover_str = greedy_set_cover_0(&sets_str);
+
+        let original_universe_str: HashSet<&str> = sets_str.values().flatten().cloned().collect();
+        let covered_universe_str: HashSet<&str> = cover_str.values().flatten().cloned().collect();
+
+        // The greedy choice should be "Set A" and "Set C"
+        assert_eq!(cover_str.len(), 3);
+        assert_eq!(original_universe_str, covered_universe_str);
+        assert!(cover_str.contains_key("Set A"));
+        assert!(cover_str.contains_key("Set C"));
+
+        // ---
+
+        // Case 2: Using integers for keys and characters for elements
+        let mut sets_char: HashMap<i32, Vec<char>> = HashMap::new();
+        sets_char.insert(1, vec!['a', 'b', 'c']);
+        sets_char.insert(2, vec!['c', 'd']);
+        sets_char.insert(3, vec!['e', 'f']);
+        sets_char.insert(4, vec!['a', 'd', 'e']);
+
+        let cover_char = greedy_set_cover_0(&sets_char);
+
+        let original_universe_char: HashSet<char> = sets_char.values().flatten().cloned().collect();
+        let covered_universe_char: HashSet<char> = cover_char.values().flatten().cloned().collect();
+
+        // A possible greedy cover is sets 1 and 4, or 1 and 3 and 2...
+        // The most important thing is that the universe is covered.
+        assert_eq!(original_universe_char, covered_universe_char);
+    }
 }
