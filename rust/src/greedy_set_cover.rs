@@ -94,68 +94,6 @@ where
 /// # Returns
 ///
 /// A `HashMap` where each key is a unique element and the value is its assigned integer ID.
-pub fn map_elements_to_integers<T, I>(elements: I) -> HashMap<T, usize>
-where
-    T: Hash + Eq + Clone,
-    I: IntoIterator<Item = T>,
-{
-    let mut mapping = HashMap::new();
-    let mut next_id = 0;
-    for element in elements {
-        // The `entry` API is efficient: it only performs one hash lookup.
-        // `or_insert_with` only executes the closure if the key is new.
-        mapping.entry(element).or_insert_with(|| {
-            let id = next_id;
-            next_id += 1;
-            id
-        });
-    }
-    mapping
-}
-
-/// Inverts a mapping from elements to integers.
-///
-/// Given a `HashMap<T, usize>`, this function creates a `HashMap<usize, T>`,
-/// allowing for quick lookups of the original element from an integer ID.
-///
-/// # Type Parameters
-///
-/// * `T`: The type of the elements, which must be cloneable to be used as a value
-///   in the new map.
-///
-/// # Arguments
-///
-/// * `mapping`: A reference to the forward mapping (`element -> integer`).
-///
-/// # Returns
-///
-/// A `HashMap` where each key is an integer ID and the value is the original element.
-pub fn revert_integer_mapping<T: Clone>(mapping: &HashMap<T, usize>) -> HashMap<usize, T> {
-    mapping
-        .iter()
-        .map(|(element, &id)| (id, element.clone()))
-        .collect()
-}
-
-/// Creates a mapping from unique elements to consecutive integers (0, 1, 2...).
-///
-/// This function iterates through a collection of elements and assigns a unique `usize`
-/// identifier to each unique element it encounters.
-///
-/// # Type Parameters
-///
-/// * `T`: The type of the elements. It must be hashable and equatable to be used
-///   as a key in the resulting `HashMap`, and cloneable to be owned by the map.
-/// * `I`: An iterator that yields references to elements of type `T`.
-///
-/// # Arguments
-///
-/// * `elements`: An iterator providing the elements to be mapped. Duplicates are handled
-///   gracefully; they will all point to the same integer ID.
-///
-/// # Returns
-///
-/// A `HashMap` where each key is a unique element and the value is its assigned integer ID.
 pub fn map_elements_to_integers_owned<T, I>(elements: I) -> HashMap<T, usize>
 where
     T: Hash + Eq + Clone,
@@ -291,14 +229,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*; // Imports greedy_set_cover from the parent module
+    use super::*;
     use std::collections::{HashMap, HashSet};
-
-    type Set = HashSet<i32>;
-    type SetVec = Vec<Set>;
-    type SetVecMap = HashMap<i32, SetVec>;
-
-    // --- Rewritten Tests ---
 
     #[test]
     fn test_basic_case() {
@@ -307,269 +239,353 @@ mod tests {
         sets.insert("B".to_string(), vec![1, 2]);
         sets.insert("C".to_string(), vec![2]);
 
-        let set_cover = greedy_set_cover_1(&sets);
+        // Test both versions
+        let set_cover_0 = greedy_set_cover_0(&sets);
+        let set_cover_1 = greedy_set_cover_1(&sets);
         let universe = make_universe(&sets);
 
-        let covered_sets: HashMap<String, Vec<i32>> = set_cover
-            .iter()
-            .map(|key| (key.clone(), sets.get(key).unwrap().clone()))
-            .collect();
+        // Helper function to check coverage
+        fn check_coverage(
+            cover: &HashSet<String>,
+            sets: &HashMap<String, Vec<i32>>,
+            universe: &HashSet<i32>,
+        ) {
+            let covered_sets: HashMap<String, Vec<i32>> = cover
+                .iter()
+                .map(|key| (key.clone(), sets.get(key).unwrap().clone()))
+                .collect();
+            let covered_universe = make_universe(&covered_sets);
+            assert_eq!(universe, &covered_universe);
+        }
 
-        let covered_universe = make_universe(&covered_sets);
-
-        assert_eq!(universe, covered_universe);
+        check_coverage(&set_cover_0, &sets, &universe);
+        check_coverage(&set_cover_1, &sets, &universe);
     }
 
-    // #[test]
-    // fn test_with_empty_set() {
-    //     let mut sets: SetVecMap = HashMap::new();
-    //     sets.insert(1, vec![Set::from([1, 2, 3]), Set::new()]);
-    //     sets.insert(2, vec![Set::from([3, 4, 5])]);
+    #[test]
+    fn test_with_empty_set() {
+        let mut sets = HashMap::new();
+        sets.insert(1, vec![1, 2, 3]);
+        sets.insert(2, vec![]);
+        sets.insert(3, vec![3, 4, 5]);
 
-    //     let function_input = transform_input(&sets);
-    //     let set_cover = greedy_set_cover_0(&function_input);
+        let set_cover_0 = greedy_set_cover_0(&sets);
+        let set_cover_1 = greedy_set_cover_1(&sets);
+        let universe = make_universe(&sets);
 
-    //     assert_eq!(
-    //         make_universe_from_test_input(&sets),
-    //         make_universe_from_cover_output(&set_cover)
-    //     );
-    // }
+        // Helper function to check coverage
+        fn check_coverage(
+            cover: &HashSet<i32>,
+            sets: &HashMap<i32, Vec<i32>>,
+            universe: &HashSet<i32>,
+        ) {
+            let covered_sets: HashMap<i32, Vec<i32>> = cover
+                .iter()
+                .map(|&key| (key, sets.get(&key).unwrap().clone()))
+                .collect();
+            let covered_universe = make_universe(&covered_sets);
+            assert_eq!(universe, &covered_universe);
+        }
 
-    // #[test]
-    // fn test_all_sets_needed() {
-    //     let mut sets: SetVecMap = HashMap::new();
-    //     sets.insert(1, vec![Set::from([1]), Set::from([2])]);
-    //     sets.insert(2, vec![Set::from([3])]);
-
-    //     let function_input = transform_input(&sets);
-    //     let set_cover = greedy_set_cover_0(&function_input);
-
-    //     assert_eq!(function_input.len(), set_cover.len());
-    //     assert_eq!(
-    //         make_universe_from_test_input(&sets),
-    //         make_universe_from_cover_output(&set_cover)
-    //     );
-    // }
-
-    // #[test]
-    // fn test_one_set_covers_all() {
-    //     let mut sets: SetVecMap = HashMap::new();
-    //     sets.insert(1, vec![Set::from([1, 2, 3, 4, 5])]);
-    //     sets.insert(2, vec![Set::from([1, 2]), Set::from([3, 4])]);
-
-    //     let function_input = transform_input(&sets);
-    //     let set_cover = greedy_set_cover_0(&function_input);
-
-    //     assert_eq!(set_cover.len(), 1);
-    //     assert_eq!(
-    //         make_universe_from_test_input(&sets),
-    //         make_universe_from_cover_output(&set_cover)
-    //     );
-    // }
-
-    // #[test]
-    // fn test_overlapping_sets() {
-    //     let mut sets: SetVecMap = HashMap::new();
-    //     sets.insert(1, vec![Set::from([1, 2, 3]), Set::from([3, 4, 5])]);
-    //     sets.insert(2, vec![Set::from([5, 6, 7])]);
-
-    //     let function_input = transform_input(&sets);
-    //     let set_cover = greedy_set_cover_0(&function_input);
-
-    //     // The greedy algorithm might pick 2 or 3 sets, but the universe must be covered.
-    //     assert!(set_cover.len() >= 2 && set_cover.len() <= 3);
-    //     assert_eq!(
-    //         make_universe_from_test_input(&sets),
-    //         make_universe_from_cover_output(&set_cover)
-    //     );
-    // }
-
-    // #[test]
-    // fn test_large_numbers() {
-    //     let mut sets: SetVecMap = HashMap::new();
-    //     sets.insert(1, vec![Set::from([1_000_000, 2_000_000, 3_000_000])]);
-    //     sets.insert(2, vec![Set::from([4_000_000, 5_000_000])]);
-
-    //     let function_input = transform_input(&sets);
-    //     let set_cover = greedy_set_cover_0(&function_input);
-
-    //     assert_eq!(
-    //         make_universe_from_test_input(&sets),
-    //         make_universe_from_cover_output(&set_cover)
-    //     );
-    // }
-
-    // #[test]
-    // fn test_duplicate_sets() {
-    //     let mut sets: SetVecMap = HashMap::new();
-    //     sets.insert(1, vec![Set::from([1, 2, 3]), Set::from([1, 2, 3])]);
-    //     sets.insert(2, vec![Set::from([4, 5, 6])]);
-
-    //     let function_input = transform_input(&sets);
-    //     let set_cover = greedy_set_cover_0(&function_input);
-
-    //     assert!(set_cover.len() < function_input.len());
-    //     assert_eq!(
-    //         make_universe_from_test_input(&sets),
-    //         make_universe_from_cover_output(&set_cover)
-    //     );
-    // }
-
-    // #[test]
-    // fn test_one_element_per_set() {
-    //     let mut sets: SetVecMap = HashMap::new();
-    //     sets.insert(1, vec![Set::from([1]), Set::from([2])]);
-    //     sets.insert(2, vec![Set::from([3]), Set::from([4])]);
-
-    //     let function_input = transform_input(&sets);
-    //     let set_cover = greedy_set_cover_0(&function_input);
-
-    //     assert_eq!(function_input.len(), set_cover.len());
-    //     assert_eq!(
-    //         make_universe_from_test_input(&sets),
-    //         make_universe_from_cover_output(&set_cover)
-    //     );
-    // }
-
-    // #[test]
-    // fn test_nested_sets() {
-    //     let mut sets: SetVecMap = HashMap::new();
-    //     sets.insert(1, vec![Set::from([1, 2, 3, 4, 5]), Set::from([1, 2, 3])]);
-    //     sets.insert(2, vec![Set::from([1, 2])]);
-
-    //     let function_input = transform_input(&sets);
-    //     let set_cover = greedy_set_cover_0(&function_input);
-
-    //     assert_eq!(set_cover.len(), 1);
-    //     assert_eq!(
-    //         make_universe_from_test_input(&sets),
-    //         make_universe_from_cover_output(&set_cover)
-    //     );
-    // }
-
-    // #[test]
-    // fn test_large_number_of_small_sets() {
-    //     let mut sets: SetVecMap = HashMap::new();
-    //     let mut category1_sets = Vec::new();
-    //     let mut category2_sets = Vec::new();
-    //     for i in 0..50 {
-    //         category1_sets.push(Set::from([i, i + 1]));
-    //         category2_sets.push(Set::from([i + 50, i + 51]));
-    //     }
-    //     sets.insert(1, category1_sets);
-    //     sets.insert(2, category2_sets);
-
-    //     let function_input = transform_input(&sets);
-    //     let set_cover = greedy_set_cover_0(&function_input);
-
-    //     assert!(set_cover.len() < function_input.len());
-    //     assert_eq!(
-    //         make_universe_from_test_input(&sets),
-    //         make_universe_from_cover_output(&set_cover)
-    //     );
-    // }
-
-    // #[test]
-    // fn test_complex_deterministic_cases() {
-    //     // Case 1: A clear greedy choice path
-    //     let mut sets1: SetVecMap = HashMap::new();
-    //     sets1.insert(
-    //         1,
-    //         vec![
-    //             Set::from([1, 2, 3, 4, 5, 6]), // S1 (Best initial choice)
-    //             Set::from([1, 2, 7]),          // S2
-    //             Set::from([3, 4, 8]),          // S3
-    //             Set::from([5, 6, 9]),          // S4
-    //             Set::from([7, 8, 9, 10]),      // S5 (Best second choice)
-    //         ],
-    //     );
-    //     let function_input1 = transform_input(&sets1);
-    //     let set_cover1 = greedy_set_cover_0(&function_input1);
-    //     // The optimal greedy cover is 2 sets: {1,2,3,4,5,6} and {7,8,9,10}
-    //     assert_eq!(set_cover1.len(), 2);
-    //     assert_eq!(
-    //         make_universe_from_test_input(&sets1),
-    //         make_universe_from_cover_output(&set_cover1)
-    //     );
-
-    //     // Case 2: A less obvious greedy path
-    //     let mut sets2: SetVecMap = HashMap::new();
-    //     sets2.insert(
-    //         1,
-    //         vec![
-    //             Set::from([1, 2, 3]),     // S1
-    //             Set::from([4, 5, 6]),     // S2
-    //             Set::from([7, 8, 9]),     // S3
-    //             Set::from([1, 4, 7]),     // S4
-    //             Set::from([2, 5, 8]),     // S5
-    //             Set::from([3, 6, 9, 10]), // S6 (covers one unique element '10')
-    //         ],
-    //     );
-    //     let function_input2 = transform_input(&sets2);
-    //     let set_cover2 = greedy_set_cover_0(&function_input2);
-    //     // An optimal solution is 3 sets (e.g., S1,S2,S3), but a greedy one might take more.
-    //     // For example S4, S5, S6, S1. The only guarantee is coverage.
-    //     assert_eq!(
-    //         make_universe_from_test_input(&sets2),
-    //         make_universe_from_cover_output(&set_cover2)
-    //     );
-    // }
-
-    // #[test]
-    // fn test_with_different_types() {
-    //     // Case 1: Using string slices for both keys and elements
-    //     let mut sets_str: HashMap<&str, Vec<&str>> = HashMap::new();
-    //     sets_str.insert("Set A", vec!["apple", "banana", "cherry"]);
-    //     sets_str.insert("Set B", vec!["banana", "date"]);
-    //     sets_str.insert("Set C", vec!["cherry", "fig", "grape"]);
-    //     sets_str.insert("Set D", vec!["fig", "grape"]);
-
-    //     let cover_str = greedy_set_cover_0(&sets_str);
-
-    //     let original_universe_str: HashSet<&str> = sets_str.values().flatten().cloned().collect();
-    //     let covered_universe_str: HashSet<&str> = cover_str.values().flatten().cloned().collect();
-
-    //     // The greedy choice should be "Set A" and "Set C"
-    //     assert_eq!(cover_str.len(), 3);
-    //     assert_eq!(original_universe_str, covered_universe_str);
-    //     assert!(cover_str.contains_key("Set A"));
-    //     assert!(cover_str.contains_key("Set C"));
-
-    //     // ---
-
-    //     // Case 2: Using integers for keys and characters for elements
-    //     let mut sets_char: HashMap<i32, Vec<char>> = HashMap::new();
-    //     sets_char.insert(1, vec!['a', 'b', 'c']);
-    //     sets_char.insert(2, vec!['c', 'd']);
-    //     sets_char.insert(3, vec!['e', 'f']);
-    //     sets_char.insert(4, vec!['a', 'd', 'e']);
-
-    //     let cover_char = greedy_set_cover_0(&sets_char);
-
-    //     let original_universe_char: HashSet<char> = sets_char.values().flatten().cloned().collect();
-    //     let covered_universe_char: HashSet<char> = cover_char.values().flatten().cloned().collect();
-
-    //     // A possible greedy cover is sets 1 and 4, or 1 and 3 and 2...
-    //     // The most important thing is that the universe is covered.
-    //     assert_eq!(original_universe_char, covered_universe_char);
-    // }
+        check_coverage(&set_cover_0, &sets, &universe);
+        check_coverage(&set_cover_1, &sets, &universe);
+    }
 
     #[test]
-    fn test_mapping() {
-        let data = vec![
-            "apple".to_string(),
-            "banana".to_string(),
-            "cherry".to_string(),
-            "apple".to_string(),
-        ];
+    fn test_all_sets_needed() {
+        let mut sets = HashMap::new();
+        sets.insert(1, vec![1]);
+        sets.insert(2, vec![2]);
+        sets.insert(3, vec![3]);
 
-        let forward_map = map_elements_to_integers(data.iter());
-        assert_eq!(forward_map.len(), 3);
-        assert!(forward_map.contains_key(&"apple".to_string()));
-        assert!(forward_map.contains_key(&"banana".to_string()));
-        assert!(forward_map.contains_key(&"cherry".to_string()));
+        let set_cover_0 = greedy_set_cover_0(&sets);
+        let set_cover_1 = greedy_set_cover_1(&sets);
 
-        let values: HashSet<usize> = forward_map.values().cloned().collect();
-        assert_eq!(values, HashSet::from([0, 1, 2]));
+        assert_eq!(sets.len(), set_cover_0.len());
+        assert_eq!(sets.len(), set_cover_1.len());
+
+        let universe = make_universe(&sets);
+
+        // Helper function to check coverage
+        fn check_coverage(
+            cover: &HashSet<i32>,
+            sets: &HashMap<i32, Vec<i32>>,
+            universe: &HashSet<i32>,
+        ) {
+            let covered_sets: HashMap<i32, Vec<i32>> = cover
+                .iter()
+                .map(|&key| (key, sets.get(&key).unwrap().clone()))
+                .collect();
+            let covered_universe = make_universe(&covered_sets);
+            assert_eq!(universe, &covered_universe);
+        }
+
+        check_coverage(&set_cover_0, &sets, &universe);
+        check_coverage(&set_cover_1, &sets, &universe);
+    }
+
+    #[test]
+    fn test_one_set_covers_all() {
+        let mut sets = HashMap::new();
+        sets.insert(1, vec![1, 2, 3, 4, 5]);
+        sets.insert(2, vec![1, 2]);
+        sets.insert(3, vec![3, 4]);
+
+        let set_cover_0 = greedy_set_cover_0(&sets);
+        let set_cover_1 = greedy_set_cover_1(&sets);
+
+        assert_eq!(set_cover_0.len(), 1);
+        assert_eq!(set_cover_1.len(), 1);
+
+        let universe = make_universe(&sets);
+
+        // Helper function to check coverage
+        fn check_coverage(
+            cover: &HashSet<i32>,
+            sets: &HashMap<i32, Vec<i32>>,
+            universe: &HashSet<i32>,
+        ) {
+            let covered_sets: HashMap<i32, Vec<i32>> = cover
+                .iter()
+                .map(|&key| (key, sets.get(&key).unwrap().clone()))
+                .collect();
+            let covered_universe = make_universe(&covered_sets);
+            assert_eq!(universe, &covered_universe);
+        }
+
+        check_coverage(&set_cover_0, &sets, &universe);
+        check_coverage(&set_cover_1, &sets, &universe);
+    }
+
+    #[test]
+    fn test_overlapping_sets() {
+        let mut sets = HashMap::new();
+        sets.insert(1, vec![1, 2, 3]);
+        sets.insert(2, vec![3, 4, 5]);
+        sets.insert(3, vec![5, 6, 7]);
+
+        let set_cover_0 = greedy_set_cover_0(&sets);
+        let set_cover_1 = greedy_set_cover_1(&sets);
+
+        // The greedy algorithm might pick 2 or 3 sets, but the universe must be covered
+        assert!(set_cover_0.len() >= 2 && set_cover_0.len() <= 3);
+        assert!(set_cover_1.len() >= 2 && set_cover_1.len() <= 3);
+
+        let universe = make_universe(&sets);
+
+        // Helper function to check coverage
+        fn check_coverage(
+            cover: &HashSet<i32>,
+            sets: &HashMap<i32, Vec<i32>>,
+            universe: &HashSet<i32>,
+        ) {
+            let covered_sets: HashMap<i32, Vec<i32>> = cover
+                .iter()
+                .map(|&key| (key, sets.get(&key).unwrap().clone()))
+                .collect();
+            let covered_universe = make_universe(&covered_sets);
+            assert_eq!(universe, &covered_universe);
+        }
+
+        check_coverage(&set_cover_0, &sets, &universe);
+        check_coverage(&set_cover_1, &sets, &universe);
+    }
+
+    #[test]
+    fn test_large_numbers() {
+        let mut sets = HashMap::new();
+        sets.insert(1, vec![1_000_000, 2_000_000, 3_000_000]);
+        sets.insert(2, vec![4_000_000, 5_000_000]);
+
+        let set_cover_0 = greedy_set_cover_0(&sets);
+        let set_cover_1 = greedy_set_cover_1(&sets);
+        let universe = make_universe(&sets);
+
+        // Helper function to check coverage
+        fn check_coverage(
+            cover: &HashSet<i32>,
+            sets: &HashMap<i32, Vec<i32>>,
+            universe: &HashSet<i32>,
+        ) {
+            let covered_sets: HashMap<i32, Vec<i32>> = cover
+                .iter()
+                .map(|&key| (key, sets.get(&key).unwrap().clone()))
+                .collect();
+            let covered_universe = make_universe(&covered_sets);
+            assert_eq!(universe, &covered_universe);
+        }
+
+        check_coverage(&set_cover_0, &sets, &universe);
+        check_coverage(&set_cover_1, &sets, &universe);
+    }
+
+    #[test]
+    fn test_duplicate_sets() {
+        let mut sets = HashMap::new();
+        sets.insert(1, vec![1, 2, 3]);
+        sets.insert(2, vec![1, 2, 3]);
+        sets.insert(3, vec![4, 5, 6]);
+
+        let set_cover_0 = greedy_set_cover_0(&sets);
+        let set_cover_1 = greedy_set_cover_1(&sets);
+
+        assert!(set_cover_0.len() < sets.len());
+        assert!(set_cover_1.len() < sets.len());
+
+        let universe = make_universe(&sets);
+
+        // Helper function to check coverage
+        fn check_coverage(
+            cover: &HashSet<i32>,
+            sets: &HashMap<i32, Vec<i32>>,
+            universe: &HashSet<i32>,
+        ) {
+            let covered_sets: HashMap<i32, Vec<i32>> = cover
+                .iter()
+                .map(|&key| (key, sets.get(&key).unwrap().clone()))
+                .collect();
+            let covered_universe = make_universe(&covered_sets);
+            assert_eq!(universe, &covered_universe);
+        }
+
+        check_coverage(&set_cover_0, &sets, &universe);
+        check_coverage(&set_cover_1, &sets, &universe);
+    }
+
+    #[test]
+    fn test_one_element_per_set() {
+        let mut sets = HashMap::new();
+        sets.insert(1, vec![1]);
+        sets.insert(2, vec![2]);
+        sets.insert(3, vec![3]);
+        sets.insert(4, vec![4]);
+
+        let set_cover_0 = greedy_set_cover_0(&sets);
+        let set_cover_1 = greedy_set_cover_1(&sets);
+
+        assert_eq!(sets.len(), set_cover_0.len());
+        assert_eq!(sets.len(), set_cover_1.len());
+
+        let universe = make_universe(&sets);
+
+        // Helper function to check coverage
+        fn check_coverage(
+            cover: &HashSet<i32>,
+            sets: &HashMap<i32, Vec<i32>>,
+            universe: &HashSet<i32>,
+        ) {
+            let covered_sets: HashMap<i32, Vec<i32>> = cover
+                .iter()
+                .map(|&key| (key, sets.get(&key).unwrap().clone()))
+                .collect();
+            let covered_universe = make_universe(&covered_sets);
+            assert_eq!(universe, &covered_universe);
+        }
+
+        check_coverage(&set_cover_0, &sets, &universe);
+        check_coverage(&set_cover_1, &sets, &universe);
+    }
+
+    #[test]
+    fn test_nested_sets() {
+        let mut sets = HashMap::new();
+        sets.insert(1, vec![1, 2, 3, 4, 5]);
+        sets.insert(2, vec![1, 2, 3]);
+        sets.insert(3, vec![1, 2]);
+
+        let set_cover_0 = greedy_set_cover_0(&sets);
+        let set_cover_1 = greedy_set_cover_1(&sets);
+
+        assert_eq!(set_cover_0.len(), 1);
+        assert_eq!(set_cover_1.len(), 1);
+
+        let universe = make_universe(&sets);
+
+        // Helper function to check coverage
+        fn check_coverage(
+            cover: &HashSet<i32>,
+            sets: &HashMap<i32, Vec<i32>>,
+            universe: &HashSet<i32>,
+        ) {
+            let covered_sets: HashMap<i32, Vec<i32>> = cover
+                .iter()
+                .map(|&key| (key, sets.get(&key).unwrap().clone()))
+                .collect();
+            let covered_universe = make_universe(&covered_sets);
+            assert_eq!(universe, &covered_universe);
+        }
+
+        check_coverage(&set_cover_0, &sets, &universe);
+        check_coverage(&set_cover_1, &sets, &universe);
+    }
+
+    #[test]
+    fn test_large_number_of_small_sets() {
+        let mut sets = HashMap::new();
+        for i in 0..50 {
+            sets.insert(i, vec![i, i + 1]);
+        }
+
+        let set_cover_0 = greedy_set_cover_0(&sets);
+        let set_cover_1 = greedy_set_cover_1(&sets);
+
+        assert!(set_cover_0.len() < sets.len());
+        assert!(set_cover_1.len() < sets.len());
+
+        let universe = make_universe(&sets);
+
+        // Helper function to check coverage
+        fn check_coverage(
+            cover: &HashSet<i32>,
+            sets: &HashMap<i32, Vec<i32>>,
+            universe: &HashSet<i32>,
+        ) {
+            let covered_sets: HashMap<i32, Vec<i32>> = cover
+                .iter()
+                .map(|&key| (key, sets.get(&key).unwrap().clone()))
+                .collect();
+            let covered_universe = make_universe(&covered_sets);
+            assert_eq!(universe, &covered_universe);
+        }
+
+        check_coverage(&set_cover_0, &sets, &universe);
+        check_coverage(&set_cover_1, &sets, &universe);
+    }
+
+    #[test]
+    fn test_complex_deterministic_cases() {
+        // Case 1: A clear greedy choice path
+        let mut sets = HashMap::new();
+        sets.insert(1, vec![1, 2, 3, 4, 5, 6]); // S1 (Best initial choice)
+        sets.insert(2, vec![1, 2, 7]); // S2
+        sets.insert(3, vec![3, 4, 8]); // S3
+        sets.insert(4, vec![5, 6, 9]); // S4
+        sets.insert(5, vec![7, 8, 9, 10]); // S5 (Best second choice)
+
+        let set_cover_0 = greedy_set_cover_0(&sets);
+        let set_cover_1 = greedy_set_cover_1(&sets);
+
+        // The optimal greedy cover is 2 sets: {1,2,3,4,5,6} and {7,8,9,10}
+        assert_eq!(set_cover_0.len(), 2);
+        assert_eq!(set_cover_1.len(), 2);
+
+        let universe = make_universe(&sets);
+
+        // Helper function to check coverage
+        fn check_coverage(
+            cover: &HashSet<i32>,
+            sets: &HashMap<i32, Vec<i32>>,
+            universe: &HashSet<i32>,
+        ) {
+            let covered_sets: HashMap<i32, Vec<i32>> = cover
+                .iter()
+                .map(|&key| (key, sets.get(&key).unwrap().clone()))
+                .collect();
+            let covered_universe = make_universe(&covered_sets);
+            assert_eq!(universe, &covered_universe);
+        }
+
+        check_coverage(&set_cover_0, &sets, &universe);
+        check_coverage(&set_cover_1, &sets, &universe);
     }
 }
