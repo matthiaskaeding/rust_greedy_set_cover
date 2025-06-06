@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 rand = "0.8.5"
+bitvec = "1"
 
 [dev-dependencies]
 csv = "1.3"
