@@ -1,0 +1,53 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "README-"
+)
+```
+
+# RcppGreedySetCover
+
+A fast implementation of the greedy algorithm for the set cover problem using 'Rcpp'.
+
+## Installation
+
+Newest version from github: 
+
+```{r gh-installation, eval = FALSE}
+devtools::install_github("matthiaskaeding/RcppGreedySetCover")
+```
+
+CRAN:
+
+```{r, eval = FALSE}
+install.packages("RcppGreedySetCover")
+```
+
+## Usage example
+
+```{r example}
+# Create some data
+set.seed(333)
+X <- data.table::data.table(
+  set = sample(1e5, 1e7, TRUE), 
+  element = sample(2e3, 1e7, TRUE), 
+  key = c("set", "element")
+)
+# Input is in long format
+head(X) 
+# Run set cover
+tictoc::tic()
+res <- RcppGreedySetCover::greedySetCover(X)
+tictoc::toc() # Takes about 10 seconds for 10 million rows on a Macbook Air M1
+# Result is in long format
+head(res) 
+# Check if all elements are covered:
+setequal(res$element, X$element)
+```
