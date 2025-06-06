@@ -5,6 +5,7 @@ use std::time::Instant;
 
 // Use the library part of your crate to import the function
 use set_cover::greedy_set_cover::greedy_set_cover_0;
+use set_cover::greedy_set_cover::greedy_set_cover_1;
 
 #[derive(Debug, Deserialize)]
 struct Record {
@@ -27,17 +28,29 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("Finished processing. Found {} unique sets.", sets_map.len());
 
-    // 2. Run the Algorithm and Record Time
-    println!("\nRunning greedy set cover algorithm...");
+    // 2. Run Algorithm 0 and Record Time
+    println!("\nRunning greedy_set_cover_0 algorithm...");
     let start_time = Instant::now();
-    let set_cover = greedy_set_cover_0(&sets_map);
-    let duration = start_time.elapsed();
+    let set_cover_0 = greedy_set_cover_0(&sets_map);
+    let duration_0 = start_time.elapsed();
 
-    // 3. Print the Results
+    // 3. Run Algorithm 1 and Record Time
+    println!("\nRunning greedy_set_cover_1 algorithm...");
+    let start_time = Instant::now();
+    let set_cover_1 = greedy_set_cover_1(&sets_map);
+    let duration_1 = start_time.elapsed();
+
+    // 4. Print the Results
     println!("\n--- Benchmark Results ---");
-    println!("Time taken: {:?}", duration);
     println!("Original number of sets: {}", sets_map.len());
-    println!("Number of sets in cover: {}", set_cover.len());
+
+    println!("\nAlgorithm 0 (greedy_set_cover_0):");
+    println!("Time taken: {:?}", duration_0);
+    println!("Number of sets in cover: {}", set_cover_0.len());
+
+    println!("\nAlgorithm 1 (greedy_set_cover_1):");
+    println!("Time taken: {:?}", duration_1);
+    println!("Number of sets in cover: {}", set_cover_1.len());
 
     Ok(())
 }
