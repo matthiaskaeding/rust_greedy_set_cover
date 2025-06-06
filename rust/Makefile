@@ -25,6 +25,14 @@ run: build debug
 build-test: build test
 
 
+bench:
+	cargo run --example benchmark --release
+
+
+bench_r:
+	Rscript scripts/r_benchmark.r	
+
+
 ################################################################################
 # Self Documenting Commands
 ################################################################################

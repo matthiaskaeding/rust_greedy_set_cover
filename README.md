@@ -1,5 +1,6 @@
-# Porting RcppGreedySetCover to rust
+# Set cover algorithms
 
-Learning rust by porting RcppGreedySetCover to rust.
+High performance implementation of set-cover algorithms.
 
-Main source for now: [this book](https://doc.rust-lang.org/book/title-page.html).
+* `RcppGreedySetCover`: R package using C++
+* `rust`: This implements the greedy-set-cover algorithm using Rust
