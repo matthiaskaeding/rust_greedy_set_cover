@@ -79,14 +79,10 @@ mod tests {
     use super::*; // Imports greedy_set_cover from the parent module
     use std::collections::{HashMap, HashSet};
 
-    // --- Type Aliases & Helper Functions ---
-
-    // Define the types used in your tests for clarity.
     type Set = HashSet<i32>;
     type SetVec = Vec<Set>;
     type SetVecMap = HashMap<i32, SetVec>;
 
-    /// Creates a "universe" of all unique elements from the original test data structure.
     fn make_universe_from_test_input(sets: &SetVecMap) -> Set {
         sets.values()
             .flatten()
@@ -94,13 +90,10 @@ mod tests {
             .collect()
     }
 
-    /// Creates a "universe" of all unique elements from the output of the greedy_set_cover function.
     fn make_universe_from_cover_output(cover: &HashMap<usize, Vec<i32>>) -> Set {
         cover.values().flatten().cloned().collect()
     }
 
-    /// Transforms the test data into the format required by `greedy_set_cover`.
-    /// It flattens the map of vectors into a single map of uniquely identified sets.
     fn transform_input(sets: &SetVecMap) -> HashMap<usize, Vec<i32>> {
         let mut function_input = HashMap::new();
         let mut set_id_counter = 0;
