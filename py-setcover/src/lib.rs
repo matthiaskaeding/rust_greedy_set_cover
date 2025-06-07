@@ -10,7 +10,6 @@ fn greedy_set_cover_py(sets: HashMap<String, Vec<i32>>, algo: i16) -> PyResult<H
 
 #[pymodule]
 fn _setcover_lib(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    // <-- RENAMED THIS FUNCTION
     m.add_function(wrap_pyfunction!(greedy_set_cover_py, m)?)?;
     Ok(())
 }

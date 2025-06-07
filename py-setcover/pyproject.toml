@@ -1,6 +1,10 @@
 [build-system]
-requires = ["maturin>=1.5"]
+requires = ["maturin>=1.8"]
 build-backend = "maturin"
+
+[tool.maturin]
+bindings = "pyo3"
+module-name = "setcover._setcover_lib"
 
 [project]
 name = "setcover"
@@ -25,14 +29,12 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 
-# Optional: Links to your project's homepage, repository, etc.
 [project.urls]
-Homepage = "https://github.com/your-username/setcover"  # Replace with your repo URL
-Repository = "https://github.com/your-username/setcover" # Replace with your repo URL
+Homepage = "https://github.com/matthias-kaeding/setcover"
+Repository = "https://github.com/matthias-kaeding/setcover"
 
-# Defines optional dependencies, which are perfect for development tools.
 [project.optional-dependencies]
 dev = [
     "pytest>=8.4",
-    "pip"
+    "pip",
 ]

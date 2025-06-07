@@ -27,7 +27,12 @@ def setcover(sets: dict, algo: str = "greedy-1") -> set:
             raise ValueError(msg)
 
 
+def test(x):
+    return x
+
+
 __all__ = [
     "setcover",
+    test,
     # "my_python_helper" # <- Add other public functions here
 ]
