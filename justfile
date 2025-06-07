@@ -26,3 +26,8 @@ py-clean:
 	rm -rf py-setcover/target/
 	rm -rf .venv/lib/python*/site-packages/setcover*
 	rm -rf .venv/lib/python*/site-packages/_setcover*
+
+# lint python
+py-lint:
+	uv tool run ruff format py-setcover
+	uv tool run ruff check --fix py-setcover 

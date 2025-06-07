@@ -57,9 +57,6 @@ def test_default_algorithm_runs():
     assert result == {"A", "B"}
 
 
-# --- Test Cases for Error Handling ---
-
-
 def test_invalid_algo_string_raises_error():
     """
     Tests that the function correctly raises a ValueError when an
@@ -75,3 +72,126 @@ def test_invalid_algo_string_raises_error():
 
     # Optionally, check that the error message is helpful
     assert 'must be in ("greedy-0", "greedy-1")' in str(excinfo.value)
+
+
+def test_different_key_types():
+    """
+    Tests that the set cover algorithm works with different key types.
+    """
+    # Test with integer keys
+    sets_int = {1: [1, 2, 3], 2: [3, 4, 5]}
+    result_int = setcover(sets_int)
+    assert len(result_int) == 2
+    assert result_int == {1, 2}
+
+
+def test_verify_coverage():
+    """
+    Tests that the selected sets actually cover all elements in the universe.
+    """
+    # Test case 1: Simple case
+    sets1 = {"A": [1, 2, 3], "B": [3, 4, 5], "C": [5, 6, 7]}
+    result1 = setcover(sets1)
+
+    # Get all elements from selected sets
+    covered_elements = set()
+    for set_name in result1:
+        covered_elements.update(sets1[set_name])
+
+    # Get all elements in the universe
+    universe = set()
+    for elements in sets1.values():
+        universe.update(elements)
+
+    assert covered_elements == universe
+
+    # Test case 2: More complex case with overlapping elements
+    sets2 = {
+        "X": [1, 2, 3, 4],
+        "Y": [3, 4, 5, 6],
+        "Z": [5, 6, 7, 8],
+        "W": [1, 8, 9, 10],
+    }
+    result2 = setcover(sets2)
+
+    # Verify coverage
+    covered_elements = set()
+    for set_name in result2:
+        covered_elements.update(sets2[set_name])
+
+    universe = set()
+    for elements in sets2.values():
+        universe.update(elements)
+
+    assert covered_elements == universe
+
+
+def test_string_key_int_values():
+    sets = {
+        "A": [1, 2, 3],
+        "B": [2, 3, 4],
+        "C": [3, 4, 5],
+    }
+    result = setcover(sets)
+    assert isinstance(result, set)
+    assert all(isinstance(k, str) for k in result)
+    assert len(result) > 0
+
+
+def test_string_key_string_values():
+    sets = {
+        "A": ["1", "2", "3"],
+        "B": ["2", "3", "4"],
+        "C": ["3", "4", "5"],
+    }
+    result = setcover(sets)
+    assert isinstance(result, set)
+    assert all(isinstance(k, str) for k in result)
+    assert len(result) > 0
+
+
+def test_int_key_int_values():
+    sets = {
+        1: [1, 2, 3],
+        2: [2, 3, 4],
+        3: [3, 4, 5],
+    }
+    result = setcover(sets)
+    assert isinstance(result, set)
+    assert all(isinstance(k, int) for k in result)
+    assert len(result) > 0
+
+
+def test_int_key_string_values():
+    sets = {
+        1: ["1", "2", "3"],
+        2: ["2", "3", "4"],
+        3: ["3", "4", "5"],
+    }
+    result = setcover(sets)
+    assert isinstance(result, set)
+    assert all(isinstance(k, int) for k in result)
+    assert len(result) > 0
+
+
+def test_invalid_input():
+    with pytest.raises(TypeError):
+        setcover("not a dict")
+
+    with pytest.raises(TypeError):
+        setcover({"A": "not a list"})
+
+    with pytest.raises(TypeError):
+        setcover({1.0: [1, 2, 3]})  # float key
+
+    with pytest.raises(TypeError):
+        setcover({"A": [1.0, 2.0, 3.0]})  # float values
+
+    with pytest.raises(ValueError):
+        setcover({})  # empty dict
+
+    with pytest.raises(ValueError):
+        setcover({"A": [], "B": []})  # empty lists
+
+    with pytest.raises(ValueError):
+        setcover({"A": [1, 2, 3]}, algo="invalid")
