@@ -3,9 +3,10 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::time::Instant;
 
-// Use the library part of your crate to import the function
+// Use the library part of your crate to import the functions
 use set_cover::greedy_set_cover::greedy_set_cover_0;
 use set_cover::greedy_set_cover::greedy_set_cover_1;
+use set_cover::greedy_set_cover::greedy_set_cover_2;
 
 #[derive(Debug, Deserialize)]
 struct Record {
@@ -40,7 +41,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     let set_cover_1 = greedy_set_cover_1(&sets_map);
     let duration_1 = start_time.elapsed();
 
-    // 4. Print the Results
+    // 4. Run Algorithm 2 and Record Time
+    println!("\nRunning greedy_set_cover_2 algorithm...");
+    let start_time = Instant::now();
+    let set_cover_2 = greedy_set_cover_2(&sets_map);
+    let duration_2 = start_time.elapsed();
+
+    // 5. Print the Results
     println!("\n--- Benchmark Results ---");
     println!("Original number of sets: {}", sets_map.len());
 
@@ -51,6 +58,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("\nAlgorithm 1 (greedy_set_cover_1):");
     println!("Time taken: {:?}", duration_1);
     println!("Number of sets in cover: {}", set_cover_1.len());
+
+    println!("\nAlgorithm 2 (greedy_set_cover_2):");
+    println!("Time taken: {:?}", duration_2);
+    println!("Number of sets in cover: {}", set_cover_2.len());
 
     Ok(())
 }
