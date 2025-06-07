@@ -3,6 +3,41 @@ use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
 /// Finds an approximate solution to the set cover problem using a greedy algorithm.
+/// Allows choosing between different implementations (0: HashSet-based, 1: BitVec-based).
+///
+/// # Arguments
+///
+/// * `sets`: A `HashMap` where keys are the identifiers of the sets and values are vectors
+///   of the elements in each set.
+/// * `algo`: An integer specifying which implementation to use (0 or 1).
+///
+/// # Type Parameters
+///
+/// * `K`: The type of the set identifiers (keys in the HashMap). Must be cloneable, hashable,
+///   and equatable.
+/// * `T`: The type of the elements within the sets. Must be cloneable, hashable, and equatable.
+///
+/// # Returns
+///
+/// A `HashSet` containing the keys of the sets that form the cover.
+///
+/// # Panics
+///
+/// Panics if the input sets do not collectively cover all of their unique elements,
+/// or if an invalid algorithm choice is provided.
+pub fn greedy_set_cover<K, T>(sets: &HashMap<K, Vec<T>>, algo: i16) -> HashSet<K>
+where
+    K: Clone + Hash + Eq + std::fmt::Debug,
+    T: Clone + Hash + Eq + std::fmt::Debug,
+{
+    match algo {
+        0 => greedy_set_cover_0(sets),
+        1 => greedy_set_cover_1(sets),
+        _ => panic!("Wrong algo choice, must be 0 or 1"),
+    }
+}
+
+/// Finds an approximate solution to the set cover problem using a greedy algorithm.
 ///
 /// # Arguments
 ///
@@ -231,6 +266,22 @@ where
 mod tests {
     use super::*;
     use std::collections::{HashMap, HashSet};
+
+    #[test]
+    fn test_greedy_set_cover() {
+        let mut sets = HashMap::new();
+        sets.insert("A".to_string(), vec![1, 2, 3]);
+        sets.insert("B".to_string(), vec![1, 2]);
+        sets.insert("C".to_string(), vec![2]);
+
+        let result_0 = greedy_set_cover(&sets, 0);
+        let result_1 = greedy_set_cover(&sets, 1);
+        let direct_0 = greedy_set_cover_0(&sets);
+        let direct_1 = greedy_set_cover_1(&sets);
+
+        assert_eq!(result_0, direct_0);
+        assert_eq!(result_1, direct_1);
+    }
 
     #[test]
     fn test_basic_case() {
