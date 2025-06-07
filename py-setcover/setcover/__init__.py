@@ -10,9 +10,9 @@ def setcover(sets: dict, algo: str = "greedy-1") -> set:
 
     Args:
         sets (dict): A dictionary of lists
-        algo (int, optional): The algorithm to use.
-                              0 for HashSet-based, 1 for BitVec-based.
-                              Defaults to 0.
+        algo (str, optional): The algorithm to use.
+                              greedy-0 for HashSet-based, greedy-1 for BitVec-based.
+                              Defaults to greedy-1, which for most cases is faster.
 
     Returns:
         set: A set containing the keys of the chosen sets that form the cover.
