@@ -2,6 +2,18 @@ use bitvec::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
+pub fn greedy_set_cover<K, T>(sets: &HashMap<K, Vec<T>>, algo: i16) -> HashSet<K>
+where
+    K: Clone + Hash + Eq + std::fmt::Debug, // Added Debug for error message
+    T: Clone + Hash + Eq + std::fmt::Debug, // Added Debug for error message
+{
+    match algo {
+        0 => greedy_set_cover_0(sets),
+        1 => greedy_set_cover_1(sets),
+        _ => panic!("Wrong algo choice, must be 0 or 1"),
+    }
+}
+
 /// Finds an approximate solution to the set cover problem using a greedy algorithm.
 ///
 /// # Arguments
@@ -231,6 +243,22 @@ where
 mod tests {
     use super::*;
     use std::collections::{HashMap, HashSet};
+
+    #[test]
+    fn test_greedy_set_cover() {
+        let mut sets = HashMap::new();
+        sets.insert("A".to_string(), vec![1, 2, 3]);
+        sets.insert("B".to_string(), vec![1, 2]);
+        sets.insert("C".to_string(), vec![2]);
+
+        let result_0 = greedy_set_cover(&sets, 0);
+        let result_1 = greedy_set_cover(&sets, 1);
+        let direct_0 = greedy_set_cover_0(&sets);
+        let direct_1 = greedy_set_cover_1(&sets);
+
+        assert_eq!(result_0, direct_0);
+        assert_eq!(result_1, direct_1);
+    }
 
     #[test]
     fn test_basic_case() {
