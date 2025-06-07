@@ -4,9 +4,13 @@ version = "0.1.0"
 authors = ["Matthias kaeding <kaedingmatthias@gmail.com>"]
 edition = "2018"
 
+[lib]
+name = "set_cover"
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
-rand = "0.8.5"
 bitvec = "1"
+pyo3 = { version = "0.19", features = ["extension-module"] }
 
 [dev-dependencies]
 csv = "1.3"
