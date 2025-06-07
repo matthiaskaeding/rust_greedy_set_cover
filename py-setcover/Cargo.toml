@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-# This is the name of the compiled .so/.pyd file
+path = "src/lib.rs"
 name = "_setcover_lib"
 crate-type = ["cdylib"]
 

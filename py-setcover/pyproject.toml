@@ -1,0 +1,40 @@
+[build-system]
+requires = ["maturin>=1.8"]
+build-backend = "maturin"
+
+[tool.maturin]
+bindings = "pyo3"
+module-name = "setcover._setcover_lib"
+
+[project]
+name = "setcover"
+version = "0.1.0"
+description = "A high-performance set cover algorithm implementation in Rust."
+readme = "README.md" 
+authors = [
+    { name = "Matthias Kaeding", email = "kaedingmatthias@gmail.com" }
+]
+license = { text = "MIT" } # Or "Apache-2.0"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+]
+
+[project.urls]
+Homepage = "https://github.com/matthias-kaeding/setcover"
+Repository = "https://github.com/matthias-kaeding/setcover"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.4",
+    "pip",
+]
