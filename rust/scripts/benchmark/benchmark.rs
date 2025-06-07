@@ -19,7 +19,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // 1. Read and Process the CSV data
     println!("Reading and processing data.csv...");
     let mut sets_map: HashMap<i32, Vec<i32>> = HashMap::new();
-    let mut rdr = csv::Reader::from_path("data.csv")?;
+    let mut rdr = csv::Reader::from_path("scripts/benchmark/data.csv")?;
 
     for result in rdr.deserialize() {
         let record: Record = result?;
