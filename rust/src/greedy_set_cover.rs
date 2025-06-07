@@ -1,4 +1,5 @@
 use bitvec::prelude::*;
+use roaring::RoaringBitmap;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
@@ -227,6 +228,94 @@ where
     cover
 }
 
+/// Finds an approximate solution to the set cover problem using a greedy algorithm.
+/// Uses Roaring bitmaps for efficient set operations.
+///
+/// # Arguments
+///
+/// * `sets`: A `HashMap` where keys are the identifiers of the sets and values are vectors
+///   of the elements in each set.
+///
+/// # Type Parameters
+///
+/// * `K`: The type of the set identifiers (keys in the HashMap). Must be cloneable, hashable,
+///   and equatable.
+/// * `T`: The type of the elements within the sets. Must be cloneable, hashable, and equatable.
+///
+/// # Returns
+///
+/// A `HashMap` containing the sets that form the cover.
+///
+/// # Panics
+///
+/// Panics if the input sets do not collectively cover all of their unique elements.
+pub fn greedy_set_cover_2<K, T>(sets: &HashMap<K, Vec<T>>) -> HashSet<K>
+where
+    K: Clone + Hash + Eq + std::fmt::Debug,
+    T: Clone + Hash + Eq + std::fmt::Debug,
+{
+    // Create mapping from elements to consecutive integers
+    let universe = make_universe(sets);
+    let mapping = map_elements_to_integers_owned(universe.into_iter());
+    let universe_size = mapping.len();
+
+    // Convert sets to Roaring bitmaps
+    let mut bit_sets: HashMap<K, RoaringBitmap> = HashMap::new();
+    for (key, elements) in sets {
+        let mut bitmap = RoaringBitmap::new();
+        for element in elements {
+            if let Some(&id) = mapping.get(element) {
+                bitmap.insert(id as u32);
+            }
+        }
+        bit_sets.insert(key.clone(), bitmap);
+    }
+
+    // Initialize uncovered elements as a full bitmap
+    let mut uncovered_elements = RoaringBitmap::new();
+    for i in 0..universe_size {
+        uncovered_elements.insert(i as u32);
+    }
+
+    let mut cover: HashSet<K> = HashSet::new();
+
+    for _ in 0..sets.len() {
+        if uncovered_elements.is_empty() {
+            break;
+        }
+
+        let mut best_set_key: Option<K> = None;
+        let mut best_set_covered_count = 0;
+        let mut best_intersection: Option<RoaringBitmap> = None;
+
+        for (key, bit_set) in &bit_sets {
+            let intersection = bit_set & &uncovered_elements;
+            let covered_count = intersection.len();
+
+            if covered_count > best_set_covered_count {
+                best_set_key = Some(key.clone());
+                best_set_covered_count = covered_count;
+                best_intersection = Some(intersection);
+            }
+        }
+
+        if let Some(key) = best_set_key {
+            if let Some(elements_to_remove) = best_intersection {
+                uncovered_elements -= &elements_to_remove;
+            }
+            cover.insert(key);
+        } else if !uncovered_elements.is_empty() {
+            panic!("Error: Unable to find a set to cover remaining elements.");
+        }
+    }
+
+    if !uncovered_elements.is_empty() {
+        panic!("Error: Could not cover all elements.");
+    }
+
+    cover
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -242,6 +331,7 @@ mod tests {
         // Test both versions
         let set_cover_0 = greedy_set_cover_0(&sets);
         let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_2 = greedy_set_cover_2(&sets);
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
@@ -260,6 +350,7 @@ mod tests {
 
         check_coverage(&set_cover_0, &sets, &universe);
         check_coverage(&set_cover_1, &sets, &universe);
+        check_coverage(&set_cover_2, &sets, &universe);
     }
 
     #[test]
@@ -271,6 +362,7 @@ mod tests {
 
         let set_cover_0 = greedy_set_cover_0(&sets);
         let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_2 = greedy_set_cover_2(&sets);
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
@@ -289,6 +381,7 @@ mod tests {
 
         check_coverage(&set_cover_0, &sets, &universe);
         check_coverage(&set_cover_1, &sets, &universe);
+        check_coverage(&set_cover_2, &sets, &universe);
     }
 
     #[test]
@@ -300,9 +393,11 @@ mod tests {
 
         let set_cover_0 = greedy_set_cover_0(&sets);
         let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_2 = greedy_set_cover_2(&sets);
 
         assert_eq!(sets.len(), set_cover_0.len());
         assert_eq!(sets.len(), set_cover_1.len());
+        assert_eq!(sets.len(), set_cover_2.len());
 
         let universe = make_universe(&sets);
 
@@ -322,6 +417,7 @@ mod tests {
 
         check_coverage(&set_cover_0, &sets, &universe);
         check_coverage(&set_cover_1, &sets, &universe);
+        check_coverage(&set_cover_2, &sets, &universe);
     }
 
     #[test]
@@ -333,9 +429,11 @@ mod tests {
 
         let set_cover_0 = greedy_set_cover_0(&sets);
         let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_2 = greedy_set_cover_2(&sets);
 
         assert_eq!(set_cover_0.len(), 1);
         assert_eq!(set_cover_1.len(), 1);
+        assert_eq!(set_cover_2.len(), 1);
 
         let universe = make_universe(&sets);
 
@@ -355,6 +453,7 @@ mod tests {
 
         check_coverage(&set_cover_0, &sets, &universe);
         check_coverage(&set_cover_1, &sets, &universe);
+        check_coverage(&set_cover_2, &sets, &universe);
     }
 
     #[test]
@@ -366,10 +465,12 @@ mod tests {
 
         let set_cover_0 = greedy_set_cover_0(&sets);
         let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_2 = greedy_set_cover_2(&sets);
 
         // The greedy algorithm might pick 2 or 3 sets, but the universe must be covered
         assert!(set_cover_0.len() >= 2 && set_cover_0.len() <= 3);
         assert!(set_cover_1.len() >= 2 && set_cover_1.len() <= 3);
+        assert!(set_cover_2.len() >= 2 && set_cover_2.len() <= 3);
 
         let universe = make_universe(&sets);
 
@@ -389,6 +490,7 @@ mod tests {
 
         check_coverage(&set_cover_0, &sets, &universe);
         check_coverage(&set_cover_1, &sets, &universe);
+        check_coverage(&set_cover_2, &sets, &universe);
     }
 
     #[test]
@@ -399,6 +501,7 @@ mod tests {
 
         let set_cover_0 = greedy_set_cover_0(&sets);
         let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_2 = greedy_set_cover_2(&sets);
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
@@ -417,6 +520,7 @@ mod tests {
 
         check_coverage(&set_cover_0, &sets, &universe);
         check_coverage(&set_cover_1, &sets, &universe);
+        check_coverage(&set_cover_2, &sets, &universe);
     }
 
     #[test]
@@ -428,9 +532,11 @@ mod tests {
 
         let set_cover_0 = greedy_set_cover_0(&sets);
         let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_2 = greedy_set_cover_2(&sets);
 
         assert!(set_cover_0.len() < sets.len());
         assert!(set_cover_1.len() < sets.len());
+        assert!(set_cover_2.len() < sets.len());
 
         let universe = make_universe(&sets);
 
@@ -450,6 +556,7 @@ mod tests {
 
         check_coverage(&set_cover_0, &sets, &universe);
         check_coverage(&set_cover_1, &sets, &universe);
+        check_coverage(&set_cover_2, &sets, &universe);
     }
 
     #[test]
@@ -462,9 +569,11 @@ mod tests {
 
         let set_cover_0 = greedy_set_cover_0(&sets);
         let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_2 = greedy_set_cover_2(&sets);
 
         assert_eq!(sets.len(), set_cover_0.len());
         assert_eq!(sets.len(), set_cover_1.len());
+        assert_eq!(sets.len(), set_cover_2.len());
 
         let universe = make_universe(&sets);
 
@@ -484,6 +593,7 @@ mod tests {
 
         check_coverage(&set_cover_0, &sets, &universe);
         check_coverage(&set_cover_1, &sets, &universe);
+        check_coverage(&set_cover_2, &sets, &universe);
     }
 
     #[test]
@@ -495,9 +605,11 @@ mod tests {
 
         let set_cover_0 = greedy_set_cover_0(&sets);
         let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_2 = greedy_set_cover_2(&sets);
 
         assert_eq!(set_cover_0.len(), 1);
         assert_eq!(set_cover_1.len(), 1);
+        assert_eq!(set_cover_2.len(), 1);
 
         let universe = make_universe(&sets);
 
@@ -517,6 +629,7 @@ mod tests {
 
         check_coverage(&set_cover_0, &sets, &universe);
         check_coverage(&set_cover_1, &sets, &universe);
+        check_coverage(&set_cover_2, &sets, &universe);
     }
 
     #[test]
@@ -528,9 +641,11 @@ mod tests {
 
         let set_cover_0 = greedy_set_cover_0(&sets);
         let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_2 = greedy_set_cover_2(&sets);
 
         assert!(set_cover_0.len() < sets.len());
         assert!(set_cover_1.len() < sets.len());
+        assert!(set_cover_2.len() < sets.len());
 
         let universe = make_universe(&sets);
 
@@ -550,6 +665,7 @@ mod tests {
 
         check_coverage(&set_cover_0, &sets, &universe);
         check_coverage(&set_cover_1, &sets, &universe);
+        check_coverage(&set_cover_2, &sets, &universe);
     }
 
     #[test]
@@ -564,10 +680,12 @@ mod tests {
 
         let set_cover_0 = greedy_set_cover_0(&sets);
         let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_2 = greedy_set_cover_2(&sets);
 
         // The optimal greedy cover is 2 sets: {1,2,3,4,5,6} and {7,8,9,10}
         assert_eq!(set_cover_0.len(), 2);
         assert_eq!(set_cover_1.len(), 2);
+        assert_eq!(set_cover_2.len(), 2);
 
         let universe = make_universe(&sets);
 
@@ -587,5 +705,6 @@ mod tests {
 
         check_coverage(&set_cover_0, &sets, &universe);
         check_coverage(&set_cover_1, &sets, &universe);
+        check_coverage(&set_cover_2, &sets, &universe);
     }
 }
