@@ -4,7 +4,6 @@ use pyo3::prelude::*;
 #[cfg(feature = "extension-module")]
 use pyo3::types::PyModule;
 
-use std::collections::{HashMap, HashSet};
 
 // This module contains your core logic and tests, it should always be included.
 mod greedy_set_cover;

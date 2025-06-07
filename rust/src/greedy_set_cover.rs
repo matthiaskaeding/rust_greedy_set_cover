@@ -1,7 +1,7 @@
 use bitvec::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
-
+#[allow(dead_code)] // This function is used by tests and the Python module
 /// Finds an approximate solution to the set cover problem using a greedy algorithm.
 /// Allows choosing between different implementations (0: HashSet-based, 1: BitVec-based).
 ///
