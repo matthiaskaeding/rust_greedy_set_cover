@@ -1,0 +1,8 @@
+[package]
+name = "setcover-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bitvec = "1"
+# NO pyo3 dependency here!
