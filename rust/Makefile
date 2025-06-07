@@ -24,13 +24,17 @@ run: build debug
 
 build-test: build test
 
-
+## Some benchmarking stuff
+scripts/benchmark/data.csv:
+	Rscript scripts/benchmark/make_data.r
+.PHONY: bench
 bench:
 	cargo run --example benchmark --release
-
-
+.PHONY: bench_r
 bench_r:
-	Rscript scripts/r_benchmark.r	
+	Rscript scripts/benchmark/r_benchmark.r	
+all-bench: scripts/benchmark/data.csv bench_r bench
+
 
 
 ################################################################################

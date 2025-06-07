@@ -14,4 +14,4 @@ serde = { version = "1.0", features = ["derive"] }
 
 [[example]]
 name = "benchmark"
-path = "scripts/benchmark.rs"
+path = "scripts/benchmark/benchmark.rs"
