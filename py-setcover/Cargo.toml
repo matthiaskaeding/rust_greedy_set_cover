@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
+# This is the name of the compiled .so/.pyd file
+name = "_setcover_lib"
 crate-type = ["cdylib"]
 
 [dependencies]
