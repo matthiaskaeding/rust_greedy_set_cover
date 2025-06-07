@@ -1,10 +1,11 @@
 use pyo3::prelude::*;
-use std::collections::{HashMap, HashSet};
+use pyo3::types::PyModule;
+use std::collections::{HashMap, HashSet}; // Make sure this use statement is present
 
 mod greedy_set_cover;
 
 #[pymodule]
-fn set_cover(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
+fn setcover_lib(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(greedy_set_cover_py, m)?)?;
     Ok(())
 }
