@@ -11,3 +11,5 @@ __pycache__/
 target
 py-setcover/tests/__pycache__
 py-setcover/setcover/__pycache__*.so
+*.csv
+.vscode/settings.json

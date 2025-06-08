@@ -31,3 +31,7 @@ py-clean:
 py-lint:
 	uv tool run ruff format py-setcover
 	uv tool run ruff check --fix py-setcover 
+
+# make data for benchmark
+make-bench-data:
+	Rscript scripts/benchmark/make_data.r
