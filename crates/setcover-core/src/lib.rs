@@ -64,8 +64,6 @@ where
     let mut uncovered_elements = bitvec![1; universe_size];
     let mut cover: AHashSet<K> = AHashSet::new();
 
-    // OPTIMIZATION: Create a reusable buffer for intersection calculations.
-    // We allocate it once here, outside all loops that use it.
     let mut intersection_buffer = BitVec::with_capacity(universe_size);
 
     for _ in 0..sets.len() {
