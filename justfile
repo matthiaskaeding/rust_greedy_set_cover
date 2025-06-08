@@ -17,6 +17,10 @@ pytest: pyinstall
 pyinstall:
 	uv tool run maturin develop -m py-setcover/Cargo.toml --uv
 
+# Innstall python pkg - release mode
+pyinstall-rel:
+	uv tool run maturin develop --release -m py-setcover/Cargo.toml --uv
+
 # Copies repo into clipboard, needs reposyn
 rsyn:
 	reposyn -i rcpp_greedy_set_cover/ -c
@@ -48,3 +52,6 @@ pytime:
 # take timing for python
 rtime:
 	Rscript scripts/benchmark/time_r.r	
+
+# Run benchmarks
+bench: rtime pytime

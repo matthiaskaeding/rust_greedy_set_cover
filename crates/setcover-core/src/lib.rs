@@ -259,33 +259,17 @@ where
     mapping
 }
 
-/// Creates a HashSet containing all unique elements from the input sets.
-///
-/// # Arguments
-///
-/// * `sets`: A `HashMap` where keys are the identifiers of the sets and values are vectors
-///   of the elements in each set.
-///
-/// # Type Parameters
-///
-/// * `K`: The type of the set identifiers (keys in the HashMap).
-/// * `T`: The type of the elements within the sets. Must be cloneable, hashable, and equatable.
-///
-/// # Returns
-///
-/// A `HashSet` containing all unique elements from the input sets.
-fn make_universe<K, T>(sets: &HashMap<K, Vec<T>>) -> HashSet<T>
-where
-    T: Clone + Hash + Eq,
-{
-    sets.values().flatten().cloned().collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::collections::{HashMap, HashSet};
 
+    fn make_universe<K, T>(sets: &HashMap<K, Vec<T>>) -> HashSet<T>
+    where
+        T: Clone + Hash + Eq,
+    {
+        sets.values().flatten().cloned().collect()
+    }
     #[test]
     fn test_greedy_set_cover() {
         let mut sets = HashMap::new();
