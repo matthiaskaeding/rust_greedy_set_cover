@@ -15,10 +15,12 @@ pytest: pyinstall
 
 # Install python pkg
 pyinstall:
+	@echo "Installing in development mode"
 	uv tool run maturin develop -m py-setcover/Cargo.toml --uv
 
 # Innstall python pkg - release mode
 pyinstall-rel:
+	@echo "Installing in release mode"
 	uv tool run maturin develop --release -m py-setcover/Cargo.toml --uv
 
 # Copies repo into clipboard, needs reposyn
@@ -49,7 +51,7 @@ make-bench-data:
 	Rscript scripts/benchmark/make_data.r
 
 # Take timing for python
-pytime:
+pytime: pyinstall-rel
 	uv run --with polars scripts/benchmark/time_py.py
 
 # Take timing for python
@@ -57,6 +59,6 @@ rtime:
 	Rscript scripts/benchmark/time_r.r	
 
 # Run benchmarks
-bench: make-bench-data rtime pytime
+bench: make-bench-data pytime rtime 
 	@echo "Deleting simulation data"
 	rm scripts/benchmark/data.csv
