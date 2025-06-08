@@ -5,6 +5,41 @@ use std::hash::Hash;
 #[allow(dead_code)] // This function is used by tests and the Python module
 
 /// Finds an approximate solution to the set cover problem using a greedy algorithm.
+/// Allows choosing between different implementations (0: HashSet-based, 1: BitVec-based).
+///
+/// # Arguments
+///
+/// * `sets`: A `HashMap` where keys are the identifiers of the sets and values are vectors
+///   of the elements in each set.
+/// * `algo`: A string specifying which implementation to use (greedy-bitvec or greedy-standard).
+///
+/// # Type Parameters
+///
+/// * `K`: The type of the set identifiers (keys in the HashMap). Must be cloneable, hashable,
+///   and equatable.
+/// * `T`: The type of the elements within the sets. Must be cloneable, hashable, and equatable.
+///
+/// # Returns
+///
+/// A `HashSet` containing the keys of the sets that form the cover.
+///
+/// # Panics
+///
+/// Panics if the input sets do not collectively cover all of their unique elements,
+/// or if an invalid algorithm choice is provided.
+pub fn greedy_set_cover<K, T>(sets: &HashMap<K, Vec<T>>, algo: String) -> Vec<K>
+where
+    K: Clone + Hash + Eq + std::fmt::Debug + Ord,
+    T: Clone + Hash + Eq + std::fmt::Debug,
+{
+    match algo.as_str() {
+        "greedy-bitvec" => greedy_set_cover_1(sets),
+        "greedy-standard" => greedy_set_cover_0(sets),
+        _ => panic!("Wrong algo choice, must be 'greedy-bitvec' or 'greedy-standard'"),
+    }
+}
+
+/// Finds an approximate solution to the set cover problem using a greedy algorithm.
 /// Maps all elements to integer first, then leveraging set operation on integers
 /// This incurs cost at the beginning but is faster later, so if this better than
 /// algorithm 0 depends on the number of sets and elements and number of needed sets -
@@ -100,7 +135,8 @@ where
             if let Some(elements_to_remove) = best_intersection {
                 uncovered_elements &= &!elements_to_remove;
             }
-            cover.insert(key);
+            cover.insert(key.clone());
+            bit_sets.remove(&key);
         } else if uncovered_elements.any() {
             panic!("Error: Unable to find a set to cover remaining elements.");
         }
@@ -112,41 +148,6 @@ where
     let mut result: Vec<K> = cover.into_iter().collect();
     result.sort();
     result
-}
-
-/// Finds an approximate solution to the set cover problem using a greedy algorithm.
-/// Allows choosing between different implementations (0: HashSet-based, 1: BitVec-based).
-///
-/// # Arguments
-///
-/// * `sets`: A `HashMap` where keys are the identifiers of the sets and values are vectors
-///   of the elements in each set.
-/// * `algo`: An integer specifying which implementation to use (0 or 1).
-///
-/// # Type Parameters
-///
-/// * `K`: The type of the set identifiers (keys in the HashMap). Must be cloneable, hashable,
-///   and equatable.
-/// * `T`: The type of the elements within the sets. Must be cloneable, hashable, and equatable.
-///
-/// # Returns
-///
-/// A `HashSet` containing the keys of the sets that form the cover.
-///
-/// # Panics
-///
-/// Panics if the input sets do not collectively cover all of their unique elements,
-/// or if an invalid algorithm choice is provided.
-pub fn greedy_set_cover<K, T>(sets: &HashMap<K, Vec<T>>, algo: i16) -> Vec<K>
-where
-    K: Clone + Hash + Eq + std::fmt::Debug + Ord,
-    T: Clone + Hash + Eq + std::fmt::Debug,
-{
-    match algo {
-        0 => greedy_set_cover_0(sets),
-        1 => greedy_set_cover_1(sets),
-        _ => panic!("Wrong algo choice, must be 0 or 1"),
-    }
 }
 
 /// Finds an approximate solution to the set cover problem using a greedy algorithm.
@@ -188,6 +189,10 @@ where
         // Iterate through all the provided sets to find the one that covers the most
         // currently uncovered elements.
         for (key, set_elements) in sets {
+            if cover.contains(key) {
+                continue;
+            }
+
             let covered_by_this_set: AHashSet<T> = set_elements
                 .iter()
                 .filter(|element| uncovered_elements.contains(element))
@@ -277,8 +282,8 @@ mod tests {
         sets.insert("B".to_string(), vec![1, 2]);
         sets.insert("C".to_string(), vec![2]);
 
-        let result_0 = greedy_set_cover(&sets, 0);
-        let result_1 = greedy_set_cover(&sets, 1);
+        let result_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
+        let result_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
         let direct_0 = greedy_set_cover_0(&sets);
         let direct_1 = greedy_set_cover_1(&sets);
 
@@ -294,8 +299,8 @@ mod tests {
         sets.insert("C".to_string(), vec![2]);
 
         // Test both versions
-        let set_cover_0 = greedy_set_cover_0(&sets);
-        let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
+        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
@@ -323,8 +328,8 @@ mod tests {
         sets.insert(2, vec![]);
         sets.insert(3, vec![3, 4, 5]);
 
-        let set_cover_0 = greedy_set_cover_0(&sets);
-        let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
+        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
@@ -348,8 +353,8 @@ mod tests {
         sets.insert(2, vec![2]);
         sets.insert(3, vec![3]);
 
-        let set_cover_0 = greedy_set_cover_0(&sets);
-        let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
+        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
 
         assert_eq!(sets.len(), set_cover_0.len());
         assert_eq!(sets.len(), set_cover_1.len());
@@ -377,8 +382,8 @@ mod tests {
         sets.insert(2, vec![1, 2]);
         sets.insert(3, vec![3, 4]);
 
-        let set_cover_0 = greedy_set_cover_0(&sets);
-        let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
+        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
 
         assert_eq!(set_cover_0.len(), 1);
         assert_eq!(set_cover_1.len(), 1);
@@ -406,8 +411,8 @@ mod tests {
         sets.insert(2, vec![3, 4, 5]);
         sets.insert(3, vec![5, 6, 7]);
 
-        let set_cover_0 = greedy_set_cover_0(&sets);
-        let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
+        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
 
         // The greedy algorithm might pick 2 or 3 sets, but the universe must be covered
         assert!(set_cover_0.len() >= 2 && set_cover_0.len() <= 3);
@@ -435,8 +440,8 @@ mod tests {
         sets.insert(1, vec![1_000_000, 2_000_000, 3_000_000]);
         sets.insert(2, vec![4_000_000, 5_000_000]);
 
-        let set_cover_0 = greedy_set_cover_0(&sets);
-        let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
+        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
@@ -460,8 +465,8 @@ mod tests {
         sets.insert(2, vec![1, 2, 3]);
         sets.insert(3, vec![4, 5, 6]);
 
-        let set_cover_0 = greedy_set_cover_0(&sets);
-        let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
+        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
 
         assert!(set_cover_0.len() < sets.len());
         assert!(set_cover_1.len() < sets.len());
@@ -490,8 +495,8 @@ mod tests {
         sets.insert(3, vec![3]);
         sets.insert(4, vec![4]);
 
-        let set_cover_0 = greedy_set_cover_0(&sets);
-        let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
+        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
 
         assert_eq!(sets.len(), set_cover_0.len());
         assert_eq!(sets.len(), set_cover_1.len());
@@ -519,8 +524,8 @@ mod tests {
         sets.insert(2, vec![1, 2, 3]);
         sets.insert(3, vec![1, 2]);
 
-        let set_cover_0 = greedy_set_cover_0(&sets);
-        let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
+        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
 
         assert_eq!(set_cover_0.len(), 1);
         assert_eq!(set_cover_1.len(), 1);
@@ -548,8 +553,8 @@ mod tests {
             sets.insert(i, vec![i, i + 1]);
         }
 
-        let set_cover_0 = greedy_set_cover_0(&sets);
-        let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
+        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
 
         assert!(set_cover_0.len() < sets.len());
         assert!(set_cover_1.len() < sets.len());
@@ -580,8 +585,8 @@ mod tests {
         sets.insert(4, vec![5, 6, 9]); // S4
         sets.insert(5, vec![7, 8, 9, 10]); // S5 (Best second choice)
 
-        let set_cover_0 = greedy_set_cover_0(&sets);
-        let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
+        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
 
         // The optimal greedy cover is 2 sets: {1,2,3,4,5,6} and {7,8,9,10}
         assert_eq!(set_cover_0.len(), 2);
@@ -612,8 +617,8 @@ mod tests {
         sets.insert(2, vec![7, 8, 9]);
         sets.insert(4, vec![10, 11, 12]);
 
-        let set_cover_0 = greedy_set_cover_0(&sets);
-        let set_cover_1 = greedy_set_cover_1(&sets);
+        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
+        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
 
         // Verify that both results are sorted
         assert!(
