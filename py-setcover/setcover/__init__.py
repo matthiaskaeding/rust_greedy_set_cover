@@ -40,7 +40,7 @@ def setcover(sets: Dict[KeyT, List[ValueT]], algo: str = "greedy-1") -> List[Key
               Defaults to greedy-1, which for most cases is faster.
 
     Returns:
-        A set containing the keys of the chosen sets that form the cover.
+        A sorted list containing the keys of the chosen sets that form the cover.
         The type of the returned set matches the type of the input dictionary keys.
 
     Raises:
