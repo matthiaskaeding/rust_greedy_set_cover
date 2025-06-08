@@ -99,42 +99,25 @@ where
     let mut uncovered_elements = bitvec![1; universe_size];
     let mut cover: AHashSet<K> = AHashSet::new();
 
-    let mut intersection_buffer = BitVec::with_capacity(universe_size);
-
     for _ in 0..sets.len() {
         if uncovered_elements.not_any() {
             break;
         }
 
-        let mut best_set_key: Option<K> = None;
-        let mut best_set_covered_count = 0;
-        let mut best_intersection: Option<BitVec> = None;
+        let best_set = bit_sets
+            .iter()
+            .filter(|(key, _)| !cover.contains(*key))
+            .max_by_key(|(_, bit_set)| {
+                let mut intersection = (*bit_set).clone();
+                intersection &= &uncovered_elements;
+                intersection.count_ones()
+            });
 
-        for (key, bit_set) in &bit_sets {
-            if cover.contains(key) {
-                continue;
-            }
-            // OPTIMIZATION: Instead of `clone`, use `clone_from` to reuse the
-            // buffer's allocation. This turns a potentially slow allocation
-            // into a much faster memory copy.
-            intersection_buffer.clone_from(bit_set);
-            intersection_buffer &= &uncovered_elements;
-
-            let covered_count = intersection_buffer.count_ones();
-
-            if covered_count > best_set_covered_count {
-                best_set_key = Some(key.clone());
-                best_set_covered_count = covered_count;
-                // We still need to clone here to save the result for later,
-                // as the buffer will be overwritten in the next iteration.
-                best_intersection = Some(intersection_buffer.clone());
-            }
-        }
-
-        if let Some(key) = best_set_key {
-            if let Some(elements_to_remove) = best_intersection {
-                uncovered_elements &= &!elements_to_remove;
-            }
+        if let Some((key, bit_set)) = best_set {
+            let mut intersection = (*bit_set).clone();
+            intersection &= &uncovered_elements;
+            uncovered_elements &= &!intersection;
+            let key = key.clone();
             cover.insert(key.clone());
             bit_sets.remove(&key);
         } else if uncovered_elements.any() {
@@ -183,31 +166,18 @@ where
             break;
         }
 
-        let mut best_set_key: Option<K> = None;
-        let mut best_set_covered: AHashSet<T> = AHashSet::new();
+        let best_set = sets
+            .iter()
+            .filter(|(key, _)| !cover.contains(*key))
+            .max_by_key(|(_, set_elements)| {
+                set_elements
+                    .iter()
+                    .filter(|element| uncovered_elements.contains(element))
+                    .count()
+            });
 
-        // Iterate through all the provided sets to find the one that covers the most
-        // currently uncovered elements.
-        for (key, set_elements) in sets {
-            if cover.contains(key) {
-                continue;
-            }
-
-            let covered_by_this_set: AHashSet<T> = set_elements
-                .iter()
-                .filter(|element| uncovered_elements.contains(element))
-                .cloned()
-                .collect();
-
-            if covered_by_this_set.len() > best_set_covered.len() {
-                best_set_key = Some(key.clone());
-                best_set_covered = covered_by_this_set;
-            }
-        }
-
-        // If a best set was found, add it to the cover and remove its elements from the universe.
-        if let Some(key) = best_set_key {
-            uncovered_elements.retain(|e| !best_set_covered.contains(e));
+        if let Some((key, set_elements)) = best_set {
+            uncovered_elements.retain(|e| !set_elements.contains(e));
             cover.insert(key.clone());
         } else if !uncovered_elements.is_empty() {
             panic!(
