@@ -46,19 +46,23 @@ pylint:
 # Benchmark stuff
 
 # Make data for benchmark
-make-bench-data:
-	@echo "Creating simulation data"
-	Rscript scripts/benchmark/make_data.r
+prep-bench n_sets="1e5" n_elements="2e3" n_rows="1e7":
+	@echo "Creating simulation data with:"
+	@echo "  Number of sets: {{n_sets}}"
+	@echo "  Number of elements: {{n_elements}}"
+	@echo "  Number of rows: {{n_rows}}"
+	Rscript scripts/benchmark/make_data.r {{n_sets}} {{n_elements}} {{n_rows}}
 
-# Take timing for python
+# Take timing for python. Install in release mode first 
 pytime: pyinstall-rel
 	uv run --with polars scripts/benchmark/time_py.py
-
 # Take timing for python
 rtime:
 	Rscript scripts/benchmark/time_r.r	
+# Both times
+time: pytime rtime
 
 # Run benchmarks
-bench: make-bench-data pytime rtime 
+bench: prep-bench pytime rtime 
 	@echo "Deleting simulation data"
 	rm scripts/benchmark/data.csv
