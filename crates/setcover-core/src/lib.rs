@@ -27,7 +27,7 @@ use std::hash::Hash;
 /// # Panics
 ///
 /// Panics if the input sets do not collectively cover all of their unique elements.
-pub fn greedy_set_cover_1<K, T>(sets: &HashMap<K, Vec<T>>) -> HashSet<K>
+pub fn greedy_set_cover_1<K, T>(sets: &HashMap<K, Vec<T>>) -> Vec<K>
 where
     K: Clone + Hash + Eq + std::fmt::Debug,
     T: Clone + Hash + Eq + std::fmt::Debug,
@@ -109,8 +109,7 @@ where
     if uncovered_elements.any() {
         panic!("Error: Could not cover all elements.");
     }
-    let cover_conv: HashSet<K> = cover.into_iter().collect();
-    cover_conv
+    cover.into_iter().collect()
 }
 
 /// Finds an approximate solution to the set cover problem using a greedy algorithm.
@@ -136,7 +135,7 @@ where
 ///
 /// Panics if the input sets do not collectively cover all of their unique elements,
 /// or if an invalid algorithm choice is provided.
-pub fn greedy_set_cover<K, T>(sets: &HashMap<K, Vec<T>>, algo: i16) -> HashSet<K>
+pub fn greedy_set_cover<K, T>(sets: &HashMap<K, Vec<T>>, algo: i16) -> Vec<K>
 where
     K: Clone + Hash + Eq + std::fmt::Debug,
     T: Clone + Hash + Eq + std::fmt::Debug,
@@ -168,7 +167,7 @@ where
 /// # Panics
 ///
 /// Panics if the input sets do not collectively cover all of their unique elements.
-pub fn greedy_set_cover_0<K, T>(sets: &HashMap<K, Vec<T>>) -> HashSet<K>
+pub fn greedy_set_cover_0<K, T>(sets: &HashMap<K, Vec<T>>) -> Vec<K>
 where
     K: Clone + Hash + Eq + std::fmt::Debug, // Added Debug for error message
     T: Clone + Hash + Eq + std::fmt::Debug, // Added Debug for error message
@@ -217,8 +216,7 @@ where
             uncovered_elements
         );
     }
-
-    cover
+    cover.into_iter().collect()
 }
 
 /// Creates a mapping from unique elements to consecutive integers (0, 1, 2...).
