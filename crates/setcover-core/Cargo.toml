@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 bitvec = "1"
-# NO pyo3 dependency here!
+ahash = "0.8.12"
