@@ -1,6 +1,6 @@
 use ahash::{AHashMap, AHashSet};
 use bitvec::prelude::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::hash::Hash;
 #[allow(dead_code)] // This function is used by tests and the Python module
 
@@ -22,14 +22,14 @@ use std::hash::Hash;
 ///
 /// # Returns
 ///
-/// A `HashMap` containing the sets that form the cover.
+/// A sorted vector containing the sets that form the cover. Outoput sorted for security reasons
 ///
 /// # Panics
 ///
 /// Panics if the input sets do not collectively cover all of their unique elements.
 pub fn greedy_set_cover_1<K, T>(sets: &HashMap<K, Vec<T>>) -> Vec<K>
 where
-    K: Clone + Hash + Eq + std::fmt::Debug,
+    K: Clone + Hash + Eq + std::fmt::Debug + Ord,
     T: Clone + Hash + Eq + std::fmt::Debug,
 {
     // Create the element-to-integer mapping directly in a single pass.
@@ -109,7 +109,9 @@ where
     if uncovered_elements.any() {
         panic!("Error: Could not cover all elements.");
     }
-    cover.into_iter().collect()
+    let mut result: Vec<K> = cover.into_iter().collect();
+    result.sort();
+    result
 }
 
 /// Finds an approximate solution to the set cover problem using a greedy algorithm.
@@ -137,7 +139,7 @@ where
 /// or if an invalid algorithm choice is provided.
 pub fn greedy_set_cover<K, T>(sets: &HashMap<K, Vec<T>>, algo: i16) -> Vec<K>
 where
-    K: Clone + Hash + Eq + std::fmt::Debug,
+    K: Clone + Hash + Eq + std::fmt::Debug + Ord,
     T: Clone + Hash + Eq + std::fmt::Debug,
 {
     match algo {
@@ -169,11 +171,11 @@ where
 /// Panics if the input sets do not collectively cover all of their unique elements.
 pub fn greedy_set_cover_0<K, T>(sets: &HashMap<K, Vec<T>>) -> Vec<K>
 where
-    K: Clone + Hash + Eq + std::fmt::Debug, // Added Debug for error message
-    T: Clone + Hash + Eq + std::fmt::Debug, // Added Debug for error message
+    K: Clone + Hash + Eq + std::fmt::Debug + Ord,
+    T: Clone + Hash + Eq + std::fmt::Debug,
 {
-    let mut uncovered_elements: HashSet<T> = sets.values().flatten().cloned().collect();
-    let mut cover = HashSet::new();
+    let mut uncovered_elements: AHashSet<T> = sets.values().flatten().cloned().collect();
+    let mut cover = AHashSet::new();
 
     for _ in 0..sets.len() {
         if uncovered_elements.is_empty() {
@@ -181,12 +183,12 @@ where
         }
 
         let mut best_set_key: Option<K> = None;
-        let mut best_set_covered: HashSet<T> = HashSet::new();
+        let mut best_set_covered: AHashSet<T> = AHashSet::new();
 
         // Iterate through all the provided sets to find the one that covers the most
         // currently uncovered elements.
         for (key, set_elements) in sets {
-            let covered_by_this_set: HashSet<T> = set_elements
+            let covered_by_this_set: AHashSet<T> = set_elements
                 .iter()
                 .filter(|element| uncovered_elements.contains(element))
                 .cloned()
@@ -216,7 +218,9 @@ where
             uncovered_elements
         );
     }
-    cover.into_iter().collect()
+    let mut result: Vec<K> = cover.into_iter().collect();
+    result.sort();
+    result
 }
 
 /// Creates a mapping from unique elements to consecutive integers (0, 1, 2...).
@@ -258,9 +262,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::{HashMap, HashSet};
+    use std::collections::HashMap;
 
-    fn make_universe<K, T>(sets: &HashMap<K, Vec<T>>) -> HashSet<T>
+    fn make_universe<K, T>(sets: &HashMap<K, Vec<T>>) -> AHashSet<T>
     where
         T: Clone + Hash + Eq,
     {
@@ -298,7 +302,7 @@ mod tests {
         fn check_coverage(
             cover: &[String],
             sets: &HashMap<String, Vec<i32>>,
-            universe: &HashSet<i32>,
+            universe: &AHashSet<i32>,
         ) {
             let covered_sets: HashMap<String, Vec<i32>> = cover
                 .iter()
@@ -324,7 +328,7 @@ mod tests {
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
-        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &HashSet<i32>) {
+        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &AHashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
                 .map(|&key| (key, sets.get(&key).unwrap().clone()))
@@ -353,7 +357,7 @@ mod tests {
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
-        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &HashSet<i32>) {
+        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &AHashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
                 .map(|&key| (key, sets.get(&key).unwrap().clone()))
@@ -382,7 +386,7 @@ mod tests {
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
-        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &HashSet<i32>) {
+        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &AHashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
                 .map(|&key| (key, sets.get(&key).unwrap().clone()))
@@ -412,7 +416,7 @@ mod tests {
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
-        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &HashSet<i32>) {
+        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &AHashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
                 .map(|&key| (key, sets.get(&key).unwrap().clone()))
@@ -436,7 +440,7 @@ mod tests {
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
-        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &HashSet<i32>) {
+        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &AHashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
                 .map(|&key| (key, sets.get(&key).unwrap().clone()))
@@ -465,7 +469,7 @@ mod tests {
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
-        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &HashSet<i32>) {
+        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &AHashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
                 .map(|&key| (key, sets.get(&key).unwrap().clone()))
@@ -495,7 +499,7 @@ mod tests {
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
-        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &HashSet<i32>) {
+        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &AHashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
                 .map(|&key| (key, sets.get(&key).unwrap().clone()))
@@ -524,7 +528,7 @@ mod tests {
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
-        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &HashSet<i32>) {
+        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &AHashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
                 .map(|&key| (key, sets.get(&key).unwrap().clone()))
@@ -553,7 +557,7 @@ mod tests {
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
-        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &HashSet<i32>) {
+        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &AHashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
                 .map(|&key| (key, sets.get(&key).unwrap().clone()))
@@ -586,7 +590,45 @@ mod tests {
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
-        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &HashSet<i32>) {
+        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &AHashSet<i32>) {
+            let covered_sets: HashMap<i32, Vec<i32>> = cover
+                .iter()
+                .map(|&key| (key, sets.get(&key).unwrap().clone()))
+                .collect();
+            let covered_universe = make_universe(&covered_sets);
+            assert_eq!(universe, &covered_universe);
+        }
+
+        check_coverage(&set_cover_0, &sets, &universe);
+        check_coverage(&set_cover_1, &sets, &universe);
+    }
+
+    #[test]
+    fn test_output_is_sorted() {
+        // Create a test case where the greedy algorithm might choose sets in any order
+        let mut sets = HashMap::new();
+        sets.insert(3, vec![1, 2, 3]);
+        sets.insert(1, vec![4, 5, 6]);
+        sets.insert(2, vec![7, 8, 9]);
+        sets.insert(4, vec![10, 11, 12]);
+
+        let set_cover_0 = greedy_set_cover_0(&sets);
+        let set_cover_1 = greedy_set_cover_1(&sets);
+
+        // Verify that both results are sorted
+        assert!(
+            set_cover_0.windows(2).all(|w| w[0] <= w[1]),
+            "Output from greedy_set_cover_0 is not sorted"
+        );
+        assert!(
+            set_cover_1.windows(2).all(|w| w[0] <= w[1]),
+            "Output from greedy_set_cover_1 is not sorted"
+        );
+
+        // Also verify that the results are equivalent (cover the same elements)
+        let universe = make_universe(&sets);
+
+        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &AHashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
                 .map(|&key| (key, sets.get(&key).unwrap().clone()))
