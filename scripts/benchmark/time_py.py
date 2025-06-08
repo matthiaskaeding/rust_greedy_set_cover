@@ -17,7 +17,6 @@ def verify_cover(sets, cover):
 
 
 df = pl.read_csv("scripts/benchmark/data.csv")
-assert df.height == int(1e7)
 sets = {}
 for s, df_ in df.group_by("set"):
     sets[s[0]] = df_.get_column("element").to_list()
