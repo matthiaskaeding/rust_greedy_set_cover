@@ -11,22 +11,22 @@ ValueT = TypeVar("ValueT", str, int)
 
 
 @overload
-def setcover(sets: Dict[str, List[int]], algo: str = "greedy-1") -> List[str]: ...
+def setcover(sets: Dict[str, List[int]], algo: str = "greedy-bitvec") -> List[str]: ...
 
 
 @overload
-def setcover(sets: Dict[str, List[str]], algo: str = "greedy-1") -> List[str]: ...
+def setcover(sets: Dict[str, List[str]], algo: str = "greedy-bitvec") -> List[str]: ...
 
 
 @overload
-def setcover(sets: Dict[int, List[int]], algo: str = "greedy-1") -> List[int]: ...
+def setcover(sets: Dict[int, List[int]], algo: str = "greedy-bitvec") -> List[int]: ...
 
 
 @overload
-def setcover(sets: Dict[int, List[str]], algo: str = "greedy-1") -> List[int]: ...
+def setcover(sets: Dict[int, List[str]], algo: str = "greedy-bitvec") -> List[int]: ...
 
 
-def setcover(sets: Dict[KeyT, List[ValueT]], algo: str = "greedy-1") -> List[KeyT]:
+def setcover(sets: Dict[KeyT, List[ValueT]], algo: str = "greedy-bitvec") -> List[KeyT]:
     """
     Finds an approximate solution to the set cover problem.
 
@@ -36,8 +36,9 @@ def setcover(sets: Dict[KeyT, List[ValueT]], algo: str = "greedy-1") -> List[Key
         sets: A dictionary of lists. Keys can be strings or integers.
               Values can be strings or integers.
         algo: The algorithm to use.
-              greedy-0 for HashSet-based, greedy-1 for BitVec-based.
-              Defaults to greedy-1, which for most cases is faster.
+              greedy-bitvec for BitVec-based implementation (faster for most cases)
+              greedy-standard for HashSet-based implementation.
+              Defaults to greedy-bitvec.
 
     Returns:
         A sorted list containing the keys of the chosen sets that form the cover.
@@ -47,12 +48,14 @@ def setcover(sets: Dict[KeyT, List[ValueT]], algo: str = "greedy-1") -> List[Key
         TypeError: If the input is not a dictionary, or if keys/values are not of supported types.
         ValueError: If no non-empty lists are provided, or if an invalid algorithm is specified.
     """
+    if algo not in ("greedy-bitvec", "greedy-standard"):
+        msg = (
+            f"""<algo> must be in ("greedy-bitvec", "greedy-standard") but is {algo}"""
+        )
+        raise ValueError(msg)
     # Validate input
     if not isinstance(sets, dict):
         raise TypeError("sets must be a dictionary")
-
-    if not all(isinstance(v, list) for v in sets.values()):
-        raise TypeError("all dictionary values must be lists")
 
     # Get the first non-empty list to determine value type
     sample_values = next((v for v in sets.values() if v), None)
@@ -82,17 +85,7 @@ def setcover(sets: Dict[KeyT, List[ValueT]], algo: str = "greedy-1") -> List[Key
         case (False, False):
             func = greedy_set_cover_i64_i64
 
-    # Validate algorithm choice
-    match algo:
-        case "greedy-0":
-            algo_int = 0  # TODO: in rust also use strings here
-        case "greedy-1":
-            algo_int = 1
-        case _:
-            msg = f"""<algo> must be in ("greedy-0", "greedy-1") but is {algo}"""
-            raise ValueError(msg)
-
-    return func(sets, algo_int)
+    return func(sets, algo)
 
 
 __all__ = [

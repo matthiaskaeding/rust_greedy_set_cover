@@ -33,8 +33,8 @@ where
     T: Clone + Hash + Eq + std::fmt::Debug,
 {
     match algo.as_str() {
-        "greedy-bitvec" => greedy_set_cover_0(sets),
-        "greedy-standard" => greedy_set_cover_1(sets),
+        "greedy-bitvec" => greedy_set_cover_1(sets),
+        "greedy-standard" => greedy_set_cover_0(sets),
         _ => panic!("Wrong algo choice, must be 'greedy-bitvec' or 'greedy-standard'"),
     }
 }

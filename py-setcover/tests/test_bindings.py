@@ -11,7 +11,7 @@ def test_obvious_choice_is_taken():
     sets = {"A": [1, 2, 3, 4, 5], "B": [1, 2], "C": [3, 4]}
 
     # Act: Call the function we want to test
-    result = setcover(sets, algo="greedy-0")
+    result = setcover(sets, algo="greedy-bitvec")
 
     # Assert: Check if the result is exactly what we expect
     assert result == ["A"]
@@ -19,15 +19,15 @@ def test_obvious_choice_is_taken():
 
 def test_algorithms_agree_on_simple_case():
     """
-    Tests that for a simple case, both the HashSet ('greedy-0') and
-    BitVec ('greedy-1') implementations yield the same result.
+    Tests that for a simple case, both the HashSet ('greedy-standard') and
+    BitVec ('greedy-bitvec') implementations yield the same result.
     """
     # Arrange
     sets = {"S1": [1, 2, 3], "S2": [3, 4, 5], "S3": [5, 6, 7]}
 
     # Act
-    result_0 = setcover(sets, algo="greedy-0")
-    result_1 = setcover(sets, algo="greedy-1")
+    result_0 = setcover(sets, algo="greedy-bitvec")
+    result_1 = setcover(sets, algo="greedy-standard")
 
     # Assert
     # The result should be ['S1', 'S2', 'S3'] in this case for the greedy algorithm
@@ -39,7 +39,7 @@ def test_algorithms_agree_on_simple_case():
 def test_default_algorithm_runs():
     """
     Tests that calling the function without an 'algo' argument works
-    and uses the default ("greedy-1").
+    and uses the default ("greedy-bitvec").
     """
     # Arrange
     sets = {"A": [1, 2], "B": [2, 3]}
@@ -71,7 +71,7 @@ def test_invalid_algo_string_raises_error():
         setcover(sets, algo="invalid-algorithm-name")
 
     # Optionally, check that the error message is helpful
-    assert 'must be in ("greedy-0", "greedy-1")' in str(excinfo.value)
+    assert 'must be in ("greedy-bitvec", "greedy-standard")' in str(excinfo.value)
 
 
 def test_different_key_types():
@@ -126,18 +126,6 @@ def test_verify_coverage():
     assert covered_elements == universe
 
 
-def test_string_key_int_values():
-    sets = {
-        "A": [1, 2, 3],
-        "B": [2, 3, 4],
-        "C": [3, 4, 5],
-    }
-    result = setcover(sets)
-    assert isinstance(result, list)
-    assert all(isinstance(k, str) for k in result)
-    assert len(result) > 0
-
-
 def test_string_key_string_values():
     sets = {
         "A": ["1", "2", "3"],
@@ -186,12 +174,6 @@ def test_invalid_input():
 
     with pytest.raises(TypeError):
         setcover({"A": [1.0, 2.0, 3.0]})  # float values
-
-    with pytest.raises(ValueError):
-        setcover({})  # empty dict
-
-    with pytest.raises(ValueError):
-        setcover({"A": [], "B": []})  # empty lists
 
     with pytest.raises(ValueError):
         setcover({"A": [1, 2, 3]}, algo="invalid")

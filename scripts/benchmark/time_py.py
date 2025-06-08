@@ -1,21 +1,19 @@
+import time
 import polars as pl
 from setcover import setcover
-import time
 
 
-def verify_cover(sets, solution):
-    # Get all elements from original sets
-    all_elements = set()
-    for s in sets.values():
-        all_elements.update(s)
+def verify_cover(sets, cover):
+    """Verify that the cover actually covers all elements."""
+    covered = set()
+    for set_name in cover:
+        covered.update(sets[set_name])
 
-    # Get all elements from solution sets
-    covered_elements = set()
-    for set_id in solution:
-        covered_elements.update(sets[set_id])
+    universe = set()
+    for elements in sets.values():
+        universe.update(elements)
 
-    # Check if all elements are covered
-    return all_elements.issubset(covered_elements)
+    return covered == universe
 
 
 df = pl.read_csv("scripts/benchmark/data.csv")
@@ -28,20 +26,20 @@ des_len = 100
 print("-Results python" + "-" * (des_len - len("-Results python")))
 
 start = time.time()
-res = setcover(sets, "greedy-0")
+res = setcover(sets, "greedy-standard")
 end = time.time()
 
-print("greedy-0")
+print("greedy-standard")
 print(f"Cover: {len(res)} sets")
 print(f"Time:  {end - start:.1f} seconds")
 assert verify_cover(sets, res)
 del res
 
 start = time.time()
-res = setcover(sets, "greedy-1")
+res = setcover(sets, "greedy-bitvec")
 end = time.time()
 
 assert verify_cover(sets, res)
-print("greedy-1")
+print("greedy-bitvec")
 print(f"Cover: {len(res)} sets")
 print(f"Time:  {end - start:.1f} seconds")

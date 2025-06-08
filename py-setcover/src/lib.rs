@@ -34,7 +34,7 @@ fn greedy_set_cover_i64_string(
 
 /// A Python module implemented in Rust.
 #[pymodule]
-fn setcover(_py: Python, m: &PyModule) -> PyResult<()> {
+fn _setcover_lib(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(greedy_set_cover_string_i64, m)?)?;
     m.add_function(wrap_pyfunction!(greedy_set_cover_string_string, m)?)?;
     m.add_function(wrap_pyfunction!(greedy_set_cover_i64_i64, m)?)?;
