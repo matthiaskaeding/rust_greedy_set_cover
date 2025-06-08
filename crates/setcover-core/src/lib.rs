@@ -1,7 +1,120 @@
+use ahash::{AHashMap, AHashSet};
 use bitvec::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 #[allow(dead_code)] // This function is used by tests and the Python module
+
+/// Finds an approximate solution to the set cover problem using a greedy algorithm.
+/// Maps all elements to integer first, then leveraging set operation on integers
+/// This incurs cost at the beginning but is faster later, so if this better than
+/// algorithm 0 depends on the number of sets and elements and number of needed sets -
+/// so it will be hard to say in advance
+/// # Arguments
+///
+/// * `sets`: A `HashMap` where keys are the identifiers of the sets and values are vectors
+///   of the elements in each set.
+///
+/// # Type Parameters
+///
+/// * `K`: The type of the set identifiers (keys in the HashMap). Must be cloneable, hashable,
+///   and equatable.
+/// * `T`: The type of the elements within the sets. Must be cloneable, hashable, and equatable.
+///
+/// # Returns
+///
+/// A `HashMap` containing the sets that form the cover.
+///
+/// # Panics
+///
+/// Panics if the input sets do not collectively cover all of their unique elements.
+pub fn greedy_set_cover_1<K, T>(sets: &HashMap<K, Vec<T>>) -> HashSet<K>
+where
+    K: Clone + Hash + Eq + std::fmt::Debug,
+    T: Clone + Hash + Eq + std::fmt::Debug,
+{
+    // Create the element-to-integer mapping directly in a single pass.
+    // This is much faster as it avoids allocating an intermediate HashSet.
+    let mut mapping: AHashMap<T, usize> = AHashMap::new();
+    let mut next_id = 0;
+    // `sets.values().flatten()` creates an iterator over every single element
+    // in all of the sets provided.
+    for element in sets.values().flatten() {
+        // The `.entry()` API is perfect for this. It finds the entry for a key
+        // and allows us to insert a value only if the key is not already present.
+        mapping.entry(element.clone()).or_insert_with(|| {
+            // This code only runs the FIRST time we see a new element.
+            let id = next_id;
+            next_id += 1;
+            id
+        });
+    }
+
+    let universe_size = mapping.len();
+    let mut bit_sets: AHashMap<K, BitVec> = AHashMap::new();
+    for (key, elements) in sets {
+        let mut bv = bitvec![0; universe_size];
+        for element in elements {
+            if let Some(&id) = mapping.get(element) {
+                bv.set(id, true);
+            }
+        }
+        bit_sets.insert(key.clone(), bv);
+    }
+
+    let mut uncovered_elements = bitvec![1; universe_size];
+    let mut cover: AHashSet<K> = AHashSet::new();
+
+    // OPTIMIZATION: Create a reusable buffer for intersection calculations.
+    // We allocate it once here, outside all loops that use it.
+    let mut intersection_buffer = BitVec::with_capacity(universe_size);
+
+    for _ in 0..sets.len() {
+        if uncovered_elements.not_any() {
+            break;
+        }
+
+        let mut best_set_key: Option<K> = None;
+        let mut best_set_covered_count = 0;
+        let mut best_intersection: Option<BitVec> = None;
+
+        for (key, bit_set) in &bit_sets {
+            if cover.contains(key) {
+                continue;
+            }
+            // OPTIMIZATION: Instead of `clone`, use `clone_from` to reuse the
+            // buffer's allocation. This turns a potentially slow allocation
+            // into a much faster memory copy.
+            intersection_buffer.clone_from(bit_set);
+            intersection_buffer &= &uncovered_elements;
+
+            let covered_count = intersection_buffer.count_ones();
+
+            if covered_count > best_set_covered_count {
+                best_set_key = Some(key.clone());
+                best_set_covered_count = covered_count;
+                // We still need to clone here to save the result for later,
+                // as the buffer will be overwritten in the next iteration.
+                best_intersection = Some(intersection_buffer.clone());
+            }
+        }
+
+        if let Some(key) = best_set_key {
+            if let Some(elements_to_remove) = best_intersection {
+                uncovered_elements &= &!elements_to_remove;
+            }
+            cover.insert(key);
+        } else if uncovered_elements.any() {
+            panic!("Error: Unable to find a set to cover remaining elements.");
+        }
+    }
+
+    if uncovered_elements.any() {
+        panic!("Error: Could not cover all elements.");
+    }
+    let cover_conv: HashSet<K> = cover.into_iter().collect();
+    cover_conv
+}
+
 /// Finds an approximate solution to the set cover problem using a greedy algorithm.
 /// Allows choosing between different implementations (0: HashSet-based, 1: BitVec-based).
 ///
@@ -166,100 +279,6 @@ where
     T: Clone + Hash + Eq,
 {
     sets.values().flatten().cloned().collect()
-}
-
-/// Finds an approximate solution to the set cover problem using a greedy algorithm.
-/// Maps all elements to integer first, then leveraging set operation on integers
-/// This incurs cost at the beginning but is faster later, so if this better than
-/// algorithm 0 depends on the number of sets and elements and number of needed sets -
-/// so it will be hard to say in advance
-/// # Arguments
-///
-/// * `sets`: A `HashMap` where keys are the identifiers of the sets and values are vectors
-///   of the elements in each set.
-///
-/// # Type Parameters
-///
-/// * `K`: The type of the set identifiers (keys in the HashMap). Must be cloneable, hashable,
-///   and equatable.
-/// * `T`: The type of the elements within the sets. Must be cloneable, hashable, and equatable.
-///
-/// # Returns
-///
-/// A `HashMap` containing the sets that form the cover.
-///
-/// # Panics
-///
-/// Panics if the input sets do not collectively cover all of their unique elements.
-pub fn greedy_set_cover_1<K, T>(sets: &HashMap<K, Vec<T>>) -> HashSet<K>
-where
-    K: Clone + Hash + Eq + std::fmt::Debug,
-    T: Clone + Hash + Eq + std::fmt::Debug,
-{
-    // ... (preprocessing and bit_sets creation is identical)
-    let universe = make_universe(sets);
-    let mapping = map_elements_to_integers_owned(universe.into_iter());
-    let universe_size = mapping.len();
-    let mut bit_sets: HashMap<K, BitVec> = HashMap::new();
-    for (key, elements) in sets {
-        let mut bv = bitvec![0; universe_size];
-        for element in elements {
-            if let Some(&id) = mapping.get(element) {
-                bv.set(id, true);
-            }
-        }
-        bit_sets.insert(key.clone(), bv);
-    }
-
-    let mut uncovered_elements = bitvec![1; universe_size];
-    let mut cover: HashSet<K> = HashSet::new();
-
-    // OPTIMIZATION: Create a reusable buffer for intersection calculations.
-    // We allocate it once here, outside all loops that use it.
-    let mut intersection_buffer = BitVec::with_capacity(universe_size);
-
-    for _ in 0..sets.len() {
-        if uncovered_elements.not_any() {
-            break;
-        }
-
-        let mut best_set_key: Option<K> = None;
-        let mut best_set_covered_count = 0;
-        let mut best_intersection: Option<BitVec> = None;
-
-        for (key, bit_set) in &bit_sets {
-            // OPTIMIZATION: Instead of `clone`, use `clone_from` to reuse the
-            // buffer's allocation. This turns a potentially slow allocation
-            // into a much faster memory copy.
-            intersection_buffer.clone_from(bit_set);
-            intersection_buffer &= &uncovered_elements;
-
-            let covered_count = intersection_buffer.count_ones();
-
-            if covered_count > best_set_covered_count {
-                best_set_key = Some(key.clone());
-                best_set_covered_count = covered_count;
-                // We still need to clone here to save the result for later,
-                // as the buffer will be overwritten in the next iteration.
-                best_intersection = Some(intersection_buffer.clone());
-            }
-        }
-
-        if let Some(key) = best_set_key {
-            if let Some(elements_to_remove) = best_intersection {
-                uncovered_elements &= &!elements_to_remove;
-            }
-            cover.insert(key);
-        } else if uncovered_elements.any() {
-            panic!("Error: Unable to find a set to cover remaining elements.");
-        }
-    }
-
-    if uncovered_elements.any() {
-        panic!("Error: Could not cover all elements.");
-    }
-
-    cover
 }
 
 #[cfg(test)]
