@@ -100,7 +100,8 @@ where
             if let Some(elements_to_remove) = best_intersection {
                 uncovered_elements &= &!elements_to_remove;
             }
-            cover.insert(key);
+            cover.insert(key.clone());
+            bit_sets.remove(&key);
         } else if uncovered_elements.any() {
             panic!("Error: Unable to find a set to cover remaining elements.");
         }
@@ -188,6 +189,10 @@ where
         // Iterate through all the provided sets to find the one that covers the most
         // currently uncovered elements.
         for (key, set_elements) in sets {
+            if cover.contains(key) {
+                continue;
+            }
+
             let covered_by_this_set: AHashSet<T> = set_elements
                 .iter()
                 .filter(|element| uncovered_elements.contains(element))
