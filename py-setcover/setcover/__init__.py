@@ -1,4 +1,4 @@
-from typing import Dict, List, Set, TypeVar, overload
+from typing import Dict, List, TypeVar, overload
 from ._setcover_lib import (
     greedy_set_cover_string_i64,
     greedy_set_cover_string_string,
@@ -11,22 +11,22 @@ ValueT = TypeVar("ValueT", str, int)
 
 
 @overload
-def setcover(sets: Dict[str, List[int]], algo: str = "greedy-1") -> Set[str]: ...
+def setcover(sets: Dict[str, List[int]], algo: str = "greedy-1") -> List[str]: ...
 
 
 @overload
-def setcover(sets: Dict[str, List[str]], algo: str = "greedy-1") -> Set[str]: ...
+def setcover(sets: Dict[str, List[str]], algo: str = "greedy-1") -> List[str]: ...
 
 
 @overload
-def setcover(sets: Dict[int, List[int]], algo: str = "greedy-1") -> Set[int]: ...
+def setcover(sets: Dict[int, List[int]], algo: str = "greedy-1") -> List[int]: ...
 
 
 @overload
-def setcover(sets: Dict[int, List[str]], algo: str = "greedy-1") -> Set[int]: ...
+def setcover(sets: Dict[int, List[str]], algo: str = "greedy-1") -> List[int]: ...
 
 
-def setcover(sets: Dict[KeyT, List[ValueT]], algo: str = "greedy-1") -> Set[KeyT]:
+def setcover(sets: Dict[KeyT, List[ValueT]], algo: str = "greedy-1") -> List[KeyT]:
     """
     Finds an approximate solution to the set cover problem.
 

@@ -14,7 +14,7 @@ def test_obvious_choice_is_taken():
     result = setcover(sets, algo="greedy-0")
 
     # Assert: Check if the result is exactly what we expect
-    assert result == {"A"}
+    assert result == ["A"]
 
 
 def test_algorithms_agree_on_simple_case():
@@ -30,10 +30,10 @@ def test_algorithms_agree_on_simple_case():
     result_1 = setcover(sets, algo="greedy-1")
 
     # Assert
-    # The result should be {'S1', 'S2', 'S3'} in this case for the greedy algorithm
+    # The result should be ['S1', 'S2', 'S3'] in this case for the greedy algorithm
     expected_result = {"S1", "S2", "S3"}
-    assert result_0 == expected_result
-    assert result_1 == expected_result
+    assert set(result_0) == expected_result
+    assert set(result_1) == expected_result
 
 
 def test_default_algorithm_runs():
@@ -54,7 +54,7 @@ def test_default_algorithm_runs():
     # For this input, the greedy choice is non-deterministic (A or B first),
     # but the final cover will always have 2 sets.
     assert len(result) == 2
-    assert result == {"A", "B"}
+    assert set(result) == {"A", "B"}
 
 
 def test_invalid_algo_string_raises_error():
@@ -82,7 +82,7 @@ def test_different_key_types():
     sets_int = {1: [1, 2, 3], 2: [3, 4, 5]}
     result_int = setcover(sets_int)
     assert len(result_int) == 2
-    assert result_int == {1, 2}
+    assert set(result_int) == {1, 2}
 
 
 def test_verify_coverage():
@@ -133,7 +133,7 @@ def test_string_key_int_values():
         "C": [3, 4, 5],
     }
     result = setcover(sets)
-    assert isinstance(result, set)
+    assert isinstance(result, list)
     assert all(isinstance(k, str) for k in result)
     assert len(result) > 0
 
@@ -145,7 +145,7 @@ def test_string_key_string_values():
         "C": ["3", "4", "5"],
     }
     result = setcover(sets)
-    assert isinstance(result, set)
+    assert isinstance(result, list)
     assert all(isinstance(k, str) for k in result)
     assert len(result) > 0
 
@@ -157,7 +157,7 @@ def test_int_key_int_values():
         3: [3, 4, 5],
     }
     result = setcover(sets)
-    assert isinstance(result, set)
+    assert isinstance(result, list)
     assert all(isinstance(k, int) for k in result)
     assert len(result) > 0
 
@@ -169,7 +169,7 @@ def test_int_key_string_values():
         3: ["3", "4", "5"],
     }
     result = setcover(sets)
-    assert isinstance(result, set)
+    assert isinstance(result, list)
     assert all(isinstance(k, int) for k in result)
     assert len(result) > 0
 

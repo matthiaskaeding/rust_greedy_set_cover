@@ -296,7 +296,7 @@ mod tests {
 
         // Helper function to check coverage
         fn check_coverage(
-            cover: &HashSet<String>,
+            cover: &[String],
             sets: &HashMap<String, Vec<i32>>,
             universe: &HashSet<i32>,
         ) {
@@ -324,11 +324,7 @@ mod tests {
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
-        fn check_coverage(
-            cover: &HashSet<i32>,
-            sets: &HashMap<i32, Vec<i32>>,
-            universe: &HashSet<i32>,
-        ) {
+        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &HashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
                 .map(|&key| (key, sets.get(&key).unwrap().clone()))
@@ -357,11 +353,7 @@ mod tests {
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
-        fn check_coverage(
-            cover: &HashSet<i32>,
-            sets: &HashMap<i32, Vec<i32>>,
-            universe: &HashSet<i32>,
-        ) {
+        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &HashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
                 .map(|&key| (key, sets.get(&key).unwrap().clone()))
@@ -390,11 +382,7 @@ mod tests {
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
-        fn check_coverage(
-            cover: &HashSet<i32>,
-            sets: &HashMap<i32, Vec<i32>>,
-            universe: &HashSet<i32>,
-        ) {
+        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &HashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
                 .map(|&key| (key, sets.get(&key).unwrap().clone()))
@@ -424,11 +412,7 @@ mod tests {
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
-        fn check_coverage(
-            cover: &HashSet<i32>,
-            sets: &HashMap<i32, Vec<i32>>,
-            universe: &HashSet<i32>,
-        ) {
+        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &HashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
                 .map(|&key| (key, sets.get(&key).unwrap().clone()))
@@ -452,11 +436,7 @@ mod tests {
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
-        fn check_coverage(
-            cover: &HashSet<i32>,
-            sets: &HashMap<i32, Vec<i32>>,
-            universe: &HashSet<i32>,
-        ) {
+        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &HashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
                 .map(|&key| (key, sets.get(&key).unwrap().clone()))
@@ -485,11 +465,7 @@ mod tests {
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
-        fn check_coverage(
-            cover: &HashSet<i32>,
-            sets: &HashMap<i32, Vec<i32>>,
-            universe: &HashSet<i32>,
-        ) {
+        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &HashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
                 .map(|&key| (key, sets.get(&key).unwrap().clone()))
@@ -519,11 +495,7 @@ mod tests {
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
-        fn check_coverage(
-            cover: &HashSet<i32>,
-            sets: &HashMap<i32, Vec<i32>>,
-            universe: &HashSet<i32>,
-        ) {
+        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &HashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
                 .map(|&key| (key, sets.get(&key).unwrap().clone()))
@@ -552,11 +524,7 @@ mod tests {
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
-        fn check_coverage(
-            cover: &HashSet<i32>,
-            sets: &HashMap<i32, Vec<i32>>,
-            universe: &HashSet<i32>,
-        ) {
+        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &HashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
                 .map(|&key| (key, sets.get(&key).unwrap().clone()))
@@ -585,11 +553,7 @@ mod tests {
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
-        fn check_coverage(
-            cover: &HashSet<i32>,
-            sets: &HashMap<i32, Vec<i32>>,
-            universe: &HashSet<i32>,
-        ) {
+        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &HashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
                 .map(|&key| (key, sets.get(&key).unwrap().clone()))
@@ -622,11 +586,7 @@ mod tests {
         let universe = make_universe(&sets);
 
         // Helper function to check coverage
-        fn check_coverage(
-            cover: &HashSet<i32>,
-            sets: &HashMap<i32, Vec<i32>>,
-            universe: &HashSet<i32>,
-        ) {
+        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &HashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
                 .map(|&key| (key, sets.get(&key).unwrap().clone()))
