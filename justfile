@@ -31,27 +31,32 @@ pydebug: pyinstall
 	uv run python -c "import setcover; print('Success!')"
 
 # Clean and reinstall
-pyclean:
+clean:
 	rm -rf py-setcover/target/
 	rm -rf .venv/lib/python*/site-packages/setcover*
 	rm -rf .venv/lib/python*/site-packages/_setcover*
-
+	rm scripts/benchmark/data.csv
 # lint python
 pylint:
 	uv tool run ruff format py-setcover
 	uv tool run ruff check --fix py-setcover 
 
-# make data for benchmark
+# Benchmark stuff
+
+# Make data for benchmark
 make-bench-data:
+	@echo "Creating simulation data"
 	Rscript scripts/benchmark/make_data.r
 
-# take timing for python
+# Take timing for python
 pytime:
 	uv run --with polars scripts/benchmark/time_py.py
 
-# take timing for python
+# Take timing for python
 rtime:
 	Rscript scripts/benchmark/time_r.r	
 
 # Run benchmarks
-bench: rtime pytime
+bench: make-bench-data rtime pytime
+	@echo "Deleting simulation data"
+	rm scripts/benchmark/data.csv
