@@ -113,34 +113,32 @@ fn greedy_set_cover_bitvec(sets: &Vec<Vec<usize>>, universe_size: usize) -> AHas
 
     let mut uncovered_elements = bitvec![1; universe_size];
     let mut cover: AHashSet<usize> = AHashSet::new();
-    let mut intersection_buffer = BitVec::with_capacity(universe_size);
     let mut iterations = 0;
 
     while uncovered_elements.any() && iterations < sets.len() {
         let mut best_set_key: Option<usize> = None;
         let mut best_set_covered_count = 0;
-        let mut best_intersection: Option<BitVec> = None;
 
         for (key, bit_set) in bit_sets.iter().enumerate() {
             if cover.contains(&key) {
                 continue;
             }
 
-            intersection_buffer.clone_from(bit_set);
-            intersection_buffer &= &uncovered_elements;
-            let covered_count = intersection_buffer.count_ones();
+            let mut temp_buffer = bit_set.clone();
+            temp_buffer &= &uncovered_elements;
+            let covered_count = temp_buffer.count_ones();
 
             if covered_count > best_set_covered_count {
                 best_set_key = Some(key);
                 best_set_covered_count = covered_count;
-                best_intersection = Some(intersection_buffer.clone());
             }
         }
 
         if let Some(key) = best_set_key {
-            if let Some(elements_to_remove) = best_intersection {
-                uncovered_elements &= &!elements_to_remove;
-            }
+            // Only compute the intersection for the best set
+            let mut temp_buffer = bit_sets[key].clone();
+            temp_buffer &= &uncovered_elements;
+            uncovered_elements &= &!temp_buffer;
             cover.insert(key);
         } else {
             panic!("Error: Unable to find a set to cover remaining elements.");
