@@ -26,7 +26,9 @@ def setcover(sets: Dict[int, List[int]], algo: str = "greedy-bitvec") -> List[in
 def setcover(sets: Dict[int, List[str]], algo: str = "greedy-bitvec") -> List[int]: ...
 
 
-def setcover(sets: Dict[KeyT, List[ValueT]], algo: str = "greedy-bitvec") -> List[KeyT]:
+def setcover(
+    sets: Dict[KeyT, List[ValueT]], algo: str = "greedy-standard"
+) -> List[KeyT]:
     """
     Finds an approximate solution to the set cover problem.
 
