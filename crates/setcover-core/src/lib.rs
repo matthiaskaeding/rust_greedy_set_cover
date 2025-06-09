@@ -114,8 +114,9 @@ fn greedy_set_cover_1(sets: &Vec<Vec<usize>>, universe_size: usize) -> AHashSet<
     let mut uncovered_elements = bitvec![1; universe_size];
     let mut cover: AHashSet<usize> = AHashSet::new();
     let mut intersection_buffer = BitVec::with_capacity(universe_size);
+    let mut iterations = 0;
 
-    while uncovered_elements.any() {
+    while uncovered_elements.any() && iterations < sets.len() {
         let mut best_set_key: Option<usize> = None;
         let mut best_set_covered_count = 0;
         let mut best_intersection: Option<BitVec> = None;
@@ -144,6 +145,7 @@ fn greedy_set_cover_1(sets: &Vec<Vec<usize>>, universe_size: usize) -> AHashSet<
         } else {
             panic!("Error: Unable to find a set to cover remaining elements.");
         }
+        iterations += 1;
     }
 
     cover
@@ -162,8 +164,9 @@ fn greedy_set_cover_1(sets: &Vec<Vec<usize>>, universe_size: usize) -> AHashSet<
 fn greedy_set_cover_0(sets: &Vec<Vec<usize>>) -> AHashSet<usize> {
     let mut uncovered_elements: AHashSet<usize> = sets.iter().flatten().cloned().collect();
     let mut cover = AHashSet::new();
+    let mut iterations = 0;
 
-    while !uncovered_elements.is_empty() {
+    while !uncovered_elements.is_empty() && iterations < sets.len() {
         let mut best_set_key: Option<usize> = None;
         let mut max_covered = 0;
 
@@ -193,9 +196,58 @@ fn greedy_set_cover_0(sets: &Vec<Vec<usize>>) -> AHashSet<usize> {
                 uncovered_elements
             );
         }
+        iterations += 1;
     }
 
     cover
+}
+
+/// A specialized version of greedy_set_cover for when elements are already integers.
+/// This avoids the unnecessary element mapping step.
+pub fn greedy_set_cover_int_elements<K>(sets: &HashMap<K, Vec<usize>>, algo: String) -> Vec<K>
+where
+    K: Clone + Hash + Eq + std::fmt::Debug + Ord,
+{
+    // 1. Map keys (K) to integers and create a reverse mapping.
+    let mut key_to_int = AHashMap::new();
+    let mut int_to_key = Vec::new();
+    for key in sets.keys() {
+        if !key_to_int.contains_key(key) {
+            let id = int_to_key.len();
+            key_to_int.insert(key.clone(), id);
+            int_to_key.push(key.clone());
+        }
+    }
+
+    // 2. Create a Vec of Vecs for integer-based sets.
+    let mut int_sets_vec: Vec<Vec<usize>> = vec![vec![]; int_to_key.len()];
+    for (key, elements) in sets {
+        let int_key = *key_to_int.get(key).unwrap();
+        int_sets_vec[int_key] = elements.clone();
+    }
+
+    // 3. Find the maximum element value to determine universe size
+    let universe_size = int_sets_vec
+        .iter()
+        .flat_map(|v| v.iter())
+        .max()
+        .map_or(0, |&x| x + 1);
+
+    // 4. Call the selected algorithm
+    let cover_int_set: AHashSet<usize> = match algo.as_str() {
+        "greedy-bitvec" => greedy_set_cover_1(&int_sets_vec, universe_size),
+        "greedy-standard" => greedy_set_cover_0(&int_sets_vec),
+        _ => panic!("Wrong algo choice, must be 'greedy-bitvec' or 'greedy-standard'"),
+    };
+
+    // 5. Convert back to original type K
+    let mut result: Vec<K> = cover_int_set
+        .into_iter()
+        .map(|i| int_to_key[i].clone())
+        .collect();
+
+    result.sort();
+    result
 }
 
 #[cfg(test)]
@@ -406,5 +458,18 @@ mod tests {
             set_cover_1.windows(2).all(|w| w[0] <= w[1]),
             "Output from greedy-bitvec is not sorted"
         );
+    }
+
+    #[test]
+    fn test_two_sets_with_same_elements() {
+        let mut sets = HashMap::new();
+        sets.insert(1, vec![1]);
+        sets.insert(2, vec![2]);
+
+        let set_cover_0 = greedy_set_cover(&sets, "greedy-standard".to_string());
+        let set_cover_1 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
+
+        assert_eq!(set_cover_0.len(), 2);
+        assert_eq!(set_cover_1.len(), 2);
     }
 }
