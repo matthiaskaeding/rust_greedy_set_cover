@@ -13,6 +13,9 @@ reqs:
 pytest: pyinstall
 	uv run pytest py-setcover/tests
 
+# Run all tests - cargo and python
+test: ctest pytest
+
 # Install python pkg
 pyinstall:
 	@echo "Installing in development mode"
