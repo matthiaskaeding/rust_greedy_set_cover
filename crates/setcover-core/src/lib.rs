@@ -2,131 +2,136 @@ use ahash::{AHashMap, AHashSet};
 use bitvec::prelude::*;
 use std::collections::HashMap;
 use std::hash::Hash;
-#[allow(dead_code)] // This function is used by tests and the Python module
 
 /// Finds an approximate solution to the set cover problem using a greedy algorithm.
-/// Allows choosing between different implementations (0: HashSet-based, 1: BitVec-based).
+///
+/// This wrapper function handles the mapping of keys and elements to integers,
+/// then calls the appropriate integer-based greedy algorithm. After computation,
+/// it maps the integer solution back to the original key type.
 ///
 /// # Arguments
 ///
 /// * `sets`: A `HashMap` where keys are the identifiers of the sets and values are vectors
 ///   of the elements in each set.
-/// * `algo`: A string specifying which implementation to use (greedy-bitvec or greedy-standard).
+/// * `algo`: A string specifying which implementation to use ("greedy-bitvec" or "greedy-standard").
 ///
 /// # Type Parameters
 ///
-/// * `K`: The type of the set identifiers (keys in the HashMap). Must be cloneable, hashable,
-///   and equatable.
+/// * `K`: The type of the set identifiers. Must be cloneable, hashable, equatable, and orderable.
 /// * `T`: The type of the elements within the sets. Must be cloneable, hashable, and equatable.
 ///
 /// # Returns
 ///
-/// A `HashSet` containing the keys of the sets that form the cover.
+/// A sorted vector of the keys of the sets that form the cover.
 ///
 /// # Panics
 ///
-/// Panics if the input sets do not collectively cover all of their unique elements,
-/// or if an invalid algorithm choice is provided.
+/// Panics if an invalid algorithm choice is provided, or if the underlying
+/// algorithms fail to find a cover.
 pub fn greedy_set_cover<K, T>(sets: &HashMap<K, Vec<T>>, algo: String) -> Vec<K>
 where
     K: Clone + Hash + Eq + std::fmt::Debug + Ord,
     T: Clone + Hash + Eq + std::fmt::Debug,
 {
-    match algo.as_str() {
-        "greedy-bitvec" => greedy_set_cover_1(sets),
-        "greedy-standard" => greedy_set_cover_0(sets),
-        _ => panic!("Wrong algo choice, must be 'greedy-bitvec' or 'greedy-standard'"),
+    // 1. Map keys (K) to integers and create a reverse mapping.
+    let mut key_to_int = AHashMap::new();
+    let mut int_to_key = Vec::new();
+    for key in sets.keys() {
+        if !key_to_int.contains_key(key) {
+            let id = int_to_key.len();
+            key_to_int.insert(key.clone(), id);
+            int_to_key.push(key.clone());
+        }
     }
-}
 
-/// Finds an approximate solution to the set cover problem using a greedy algorithm.
-/// Maps all elements to integer first, then leveraging set operation on integers
-/// This incurs cost at the beginning but is faster later, so if this better than
-/// algorithm 0 depends on the number of sets and elements and number of needed sets -
-/// so it will be hard to say in advance
-/// # Arguments
-///
-/// * `sets`: A `HashMap` where keys are the identifiers of the sets and values are vectors
-///   of the elements in each set.
-///
-/// # Type Parameters
-///
-/// * `K`: The type of the set identifiers (keys in the HashMap). Must be cloneable, hashable,
-///   and equatable.
-/// * `T`: The type of the elements within the sets. Must be cloneable, hashable, and equatable.
-///
-/// # Returns
-///
-/// A sorted vector containing the sets that form the cover. Outoput sorted for security reasons
-///
-/// # Panics
-///
-/// Panics if the input sets do not collectively cover all of their unique elements.
-pub fn greedy_set_cover_1<K, T>(sets: &HashMap<K, Vec<T>>) -> Vec<K>
-where
-    K: Clone + Hash + Eq + std::fmt::Debug + Ord,
-    T: Clone + Hash + Eq + std::fmt::Debug,
-{
-    // Create the element-to-integer mapping directly in a single pass.
-    // This is much faster as it avoids allocating an intermediate HashSet.
-    let mut mapping: AHashMap<T, usize> = AHashMap::new();
-    let mut next_id = 0;
-    // `sets.values().flatten()` creates an iterator over every single element
-    // in all of the sets provided.
+    // 2. Map elements (T) to integers.
+    let mut element_to_int = AHashMap::new();
+    let mut next_element_id = 0;
     for element in sets.values().flatten() {
-        // The `.entry()` API is perfect for this. It finds the entry for a key
-        // and allows us to insert a value only if the key is not already present.
-        mapping.entry(element.clone()).or_insert_with(|| {
-            // This code only runs the FIRST time we see a new element.
-            let id = next_id;
-            next_id += 1;
+        element_to_int.entry(element.clone()).or_insert_with(|| {
+            let id = next_element_id;
+            next_element_id += 1;
             id
         });
     }
 
-    let universe_size = mapping.len();
-    let mut bit_sets: AHashMap<K, BitVec> = AHashMap::new();
+    // 3. Create a Vec of Vecs for integer-based sets.
+    let mut int_sets_vec: Vec<Vec<usize>> = vec![vec![]; int_to_key.len()];
     for (key, elements) in sets {
-        let mut bv = bitvec![0; universe_size];
-        for element in elements {
-            if let Some(&id) = mapping.get(element) {
-                bv.set(id, true);
-            }
-        }
-        bit_sets.insert(key.clone(), bv);
+        let int_key = *key_to_int.get(key).unwrap();
+        let int_elements = elements
+            .iter()
+            .map(|el| *element_to_int.get(el).unwrap())
+            .collect();
+        int_sets_vec[int_key] = int_elements;
     }
 
-    let mut uncovered_elements = bitvec![1; universe_size];
-    let mut cover: AHashSet<K> = AHashSet::new();
+    // 4. Call the selected algorithm. It returns a HashSet of integer keys.
+    let cover_int_set: AHashSet<usize> = match algo.as_str() {
+        "greedy-bitvec" => greedy_set_cover_1(&int_sets_vec, next_element_id),
+        "greedy-standard" => greedy_set_cover_0(&int_sets_vec),
+        _ => panic!("Wrong algo choice, must be 'greedy-bitvec' or 'greedy-standard'"),
+    };
 
+    // 5. Convert the resulting HashSet of integer keys back to the original type K.
+    let mut result: Vec<K> = cover_int_set
+        .into_iter()
+        .map(|i| int_to_key[i].clone())
+        .collect();
+
+    // Sort the final result for a deterministic output.
+    result.sort();
+    result
+}
+
+/// Finds an approximate solution to the set cover problem using a greedy algorithm
+/// optimized with BitVec.
+///
+/// # Arguments
+///
+/// * `sets`: A `Vec` where the index is the integer key and the value is a vector of integer elements.
+/// * `universe_size`: The total number of unique elements.
+///
+/// # Returns
+///
+/// An `AHashSet` containing the integer keys of the sets that form the cover.
+fn greedy_set_cover_1(sets: &Vec<Vec<usize>>, universe_size: usize) -> AHashSet<usize> {
+    if universe_size == 0 {
+        return AHashSet::new();
+    }
+
+    let bit_sets: Vec<BitVec> = sets
+        .iter()
+        .map(|elements| {
+            let mut bv = bitvec![0; universe_size];
+            for &id in elements {
+                bv.set(id, true);
+            }
+            bv
+        })
+        .collect();
+
+    let mut uncovered_elements = bitvec![1; universe_size];
+    let mut cover: AHashSet<usize> = AHashSet::new();
     let mut intersection_buffer = BitVec::with_capacity(universe_size);
 
-    for _ in 0..sets.len() {
-        if uncovered_elements.not_any() {
-            break;
-        }
-
-        let mut best_set_key: Option<K> = None;
+    while uncovered_elements.any() {
+        let mut best_set_key: Option<usize> = None;
         let mut best_set_covered_count = 0;
         let mut best_intersection: Option<BitVec> = None;
 
-        for (key, bit_set) in &bit_sets {
-            if cover.contains(key) {
+        for (key, bit_set) in bit_sets.iter().enumerate() {
+            if cover.contains(&key) {
                 continue;
             }
-            // OPTIMIZATION: Instead of `clone`, use `clone_from` to reuse the
-            // buffer's allocation. This turns a potentially slow allocation
-            // into a much faster memory copy.
+
             intersection_buffer.clone_from(bit_set);
             intersection_buffer &= &uncovered_elements;
-
             let covered_count = intersection_buffer.count_ones();
 
             if covered_count > best_set_covered_count {
-                best_set_key = Some(key.clone());
+                best_set_key = Some(key);
                 best_set_covered_count = covered_count;
-                // We still need to clone here to save the result for later,
-                // as the buffer will be overwritten in the next iteration.
                 best_intersection = Some(intersection_buffer.clone());
             }
         }
@@ -135,81 +140,54 @@ where
             if let Some(elements_to_remove) = best_intersection {
                 uncovered_elements &= &!elements_to_remove;
             }
-            cover.insert(key.clone());
-            bit_sets.remove(&key);
-        } else if uncovered_elements.any() {
+            cover.insert(key);
+        } else {
             panic!("Error: Unable to find a set to cover remaining elements.");
         }
     }
 
-    if uncovered_elements.any() {
-        panic!("Error: Could not cover all elements.");
-    }
-    let mut result: Vec<K> = cover.into_iter().collect();
-    result.sort();
-    result
+    cover
 }
 
-/// Finds an approximate solution to the set cover problem using a greedy algorithm.
+/// Finds an approximate solution to the set cover problem using a standard
+/// HashSet-based greedy algorithm.
 ///
 /// # Arguments
 ///
-/// * `sets`: A `HashMap` where keys are the identifiers of the sets and values are vectors
-///   of the elements in each set.
-///
-/// # Type Parameters
-///
-/// * `K`: The type of the set identifiers (keys in the HashMap). Must be cloneable, hashable,
-///   and equatable.
-/// * `T`: The type of the elements within the sets. Must be cloneable, hashable, and equatable.
+/// * `sets`: A `Vec` where the index is the integer key and the value is a vector of integer elements.
 ///
 /// # Returns
 ///
-/// A `HashMap` containing the sets that form the cover.
-///
-/// # Panics
-///
-/// Panics if the input sets do not collectively cover all of their unique elements.
-pub fn greedy_set_cover_0<K, T>(sets: &HashMap<K, Vec<T>>) -> Vec<K>
-where
-    K: Clone + Hash + Eq + std::fmt::Debug + Ord,
-    T: Clone + Hash + Eq + std::fmt::Debug,
-{
-    let mut uncovered_elements: AHashSet<T> = sets.values().flatten().cloned().collect();
+/// An `AHashSet` containing the integer keys of the sets that form the cover.
+fn greedy_set_cover_0(sets: &Vec<Vec<usize>>) -> AHashSet<usize> {
+    let mut uncovered_elements: AHashSet<usize> = sets.iter().flatten().cloned().collect();
     let mut cover = AHashSet::new();
 
-    for _ in 0..sets.len() {
-        if uncovered_elements.is_empty() {
-            break;
-        }
+    while !uncovered_elements.is_empty() {
+        let mut best_set_key: Option<usize> = None;
+        let mut max_covered = 0;
 
-        let mut best_set_key: Option<K> = None;
-        let mut best_set_covered: AHashSet<T> = AHashSet::new();
-
-        // Iterate through all the provided sets to find the one that covers the most
-        // currently uncovered elements.
-        for (key, set_elements) in sets {
-            if cover.contains(key) {
+        for (key, set_elements) in sets.iter().enumerate() {
+            if cover.contains(&key) {
                 continue;
             }
-
-            let covered_by_this_set: AHashSet<T> = set_elements
+            let intersection_count = set_elements
                 .iter()
-                .filter(|element| uncovered_elements.contains(element))
-                .cloned()
-                .collect();
+                .filter(|e| uncovered_elements.contains(e))
+                .count();
 
-            if covered_by_this_set.len() > best_set_covered.len() {
-                best_set_key = Some(key.clone());
-                best_set_covered = covered_by_this_set;
+            if intersection_count > max_covered {
+                max_covered = intersection_count;
+                best_set_key = Some(key);
             }
         }
 
-        // If a best set was found, add it to the cover and remove its elements from the universe.
         if let Some(key) = best_set_key {
-            uncovered_elements.retain(|e| !best_set_covered.contains(e));
-            cover.insert(key.clone());
-        } else if !uncovered_elements.is_empty() {
+            for element in &sets[key] {
+                uncovered_elements.remove(element);
+            }
+            cover.insert(key);
+        } else {
             panic!(
                 "Error: Unable to find a set to cover the remaining elements: {:?}",
                 uncovered_elements
@@ -217,51 +195,7 @@ where
         }
     }
 
-    if !uncovered_elements.is_empty() {
-        panic!(
-            "Error: Could not cover all elements after iterating through all sets. Remaining elements: {:?}",
-            uncovered_elements
-        );
-    }
-    let mut result: Vec<K> = cover.into_iter().collect();
-    result.sort();
-    result
-}
-
-/// Creates a mapping from unique elements to consecutive integers (0, 1, 2...).
-///
-/// This function iterates through a collection of elements and assigns a unique `usize`
-/// identifier to each unique element it encounters.
-///
-/// # Type Parameters
-///
-/// * `T`: The type of the elements. It must be hashable and equatable to be used
-///   as a key in the resulting `HashMap`, and cloneable to be owned by the map.
-/// * `I`: An iterator that yields references to elements of type `T`.
-///
-/// # Arguments
-///
-/// * `elements`: An iterator providing the elements to be mapped. Duplicates are handled
-///   gracefully; they will all point to the same integer ID.
-///
-/// # Returns
-///
-/// A `HashMap` where each key is a unique element and the value is its assigned integer ID.
-pub fn map_elements_to_integers_owned<T, I>(elements: I) -> HashMap<T, usize>
-where
-    T: Hash + Eq + Clone,
-    I: IntoIterator<Item = T>,
-{
-    let mut mapping = HashMap::new();
-    let mut next_id = 0;
-    for element in elements {
-        mapping.entry(element).or_insert_with(|| {
-            let id = next_id;
-            next_id += 1;
-            id
-        });
-    }
-    mapping
+    cover
 }
 
 #[cfg(test)]
@@ -275,21 +209,6 @@ mod tests {
     {
         sets.values().flatten().cloned().collect()
     }
-    #[test]
-    fn test_greedy_set_cover() {
-        let mut sets = HashMap::new();
-        sets.insert("A".to_string(), vec![1, 2, 3]);
-        sets.insert("B".to_string(), vec![1, 2]);
-        sets.insert("C".to_string(), vec![2]);
-
-        let result_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
-        let result_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
-        let direct_0 = greedy_set_cover_0(&sets);
-        let direct_1 = greedy_set_cover_1(&sets);
-
-        assert_eq!(result_0, direct_0);
-        assert_eq!(result_1, direct_1);
-    }
 
     #[test]
     fn test_basic_case() {
@@ -298,12 +217,10 @@ mod tests {
         sets.insert("B".to_string(), vec![1, 2]);
         sets.insert("C".to_string(), vec![2]);
 
-        // Test both versions
-        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
-        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
+        let set_cover_0 = greedy_set_cover(&sets, "greedy-standard".to_string());
+        let set_cover_1 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
         let universe = make_universe(&sets);
 
-        // Helper function to check coverage
         fn check_coverage(
             cover: &[String],
             sets: &HashMap<String, Vec<i32>>,
@@ -317,6 +234,9 @@ mod tests {
             assert_eq!(universe, &covered_universe);
         }
 
+        assert_eq!(set_cover_0, vec!["A".to_string()]);
+        assert_eq!(set_cover_1, vec!["A".to_string()]);
+
         check_coverage(&set_cover_0, &sets, &universe);
         check_coverage(&set_cover_1, &sets, &universe);
     }
@@ -328,11 +248,10 @@ mod tests {
         sets.insert(2, vec![]);
         sets.insert(3, vec![3, 4, 5]);
 
-        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
-        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
+        let set_cover_0 = greedy_set_cover(&sets, "greedy-standard".to_string());
+        let set_cover_1 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
         let universe = make_universe(&sets);
 
-        // Helper function to check coverage
         fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &AHashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
@@ -341,6 +260,9 @@ mod tests {
             let covered_universe = make_universe(&covered_sets);
             assert_eq!(universe, &covered_universe);
         }
+
+        assert_eq!(set_cover_0, vec![1, 3]);
+        assert_eq!(set_cover_1, vec![1, 3]);
 
         check_coverage(&set_cover_0, &sets, &universe);
         check_coverage(&set_cover_1, &sets, &universe);
@@ -353,15 +275,14 @@ mod tests {
         sets.insert(2, vec![2]);
         sets.insert(3, vec![3]);
 
-        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
-        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
+        let set_cover_0 = greedy_set_cover(&sets, "greedy-standard".to_string());
+        let set_cover_1 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
 
         assert_eq!(sets.len(), set_cover_0.len());
         assert_eq!(sets.len(), set_cover_1.len());
 
         let universe = make_universe(&sets);
 
-        // Helper function to check coverage
         fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &AHashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
@@ -382,15 +303,16 @@ mod tests {
         sets.insert(2, vec![1, 2]);
         sets.insert(3, vec![3, 4]);
 
-        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
-        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
+        let set_cover_0 = greedy_set_cover(&sets, "greedy-standard".to_string());
+        let set_cover_1 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
 
         assert_eq!(set_cover_0.len(), 1);
         assert_eq!(set_cover_1.len(), 1);
+        assert_eq!(set_cover_0, vec![1]);
+        assert_eq!(set_cover_1, vec![1]);
 
         let universe = make_universe(&sets);
 
-        // Helper function to check coverage
         fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &AHashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
@@ -411,157 +333,14 @@ mod tests {
         sets.insert(2, vec![3, 4, 5]);
         sets.insert(3, vec![5, 6, 7]);
 
-        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
-        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
+        let set_cover_0 = greedy_set_cover(&sets, "greedy-standard".to_string());
+        let set_cover_1 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
 
-        // The greedy algorithm might pick 2 or 3 sets, but the universe must be covered
-        assert!(set_cover_0.len() >= 2 && set_cover_0.len() <= 3);
-        assert!(set_cover_1.len() >= 2 && set_cover_1.len() <= 3);
-
-        let universe = make_universe(&sets);
-
-        // Helper function to check coverage
-        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &AHashSet<i32>) {
-            let covered_sets: HashMap<i32, Vec<i32>> = cover
-                .iter()
-                .map(|&key| (key, sets.get(&key).unwrap().clone()))
-                .collect();
-            let covered_universe = make_universe(&covered_sets);
-            assert_eq!(universe, &covered_universe);
-        }
-
-        check_coverage(&set_cover_0, &sets, &universe);
-        check_coverage(&set_cover_1, &sets, &universe);
-    }
-
-    #[test]
-    fn test_large_numbers() {
-        let mut sets = HashMap::new();
-        sets.insert(1, vec![1_000_000, 2_000_000, 3_000_000]);
-        sets.insert(2, vec![4_000_000, 5_000_000]);
-
-        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
-        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
-        let universe = make_universe(&sets);
-
-        // Helper function to check coverage
-        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &AHashSet<i32>) {
-            let covered_sets: HashMap<i32, Vec<i32>> = cover
-                .iter()
-                .map(|&key| (key, sets.get(&key).unwrap().clone()))
-                .collect();
-            let covered_universe = make_universe(&covered_sets);
-            assert_eq!(universe, &covered_universe);
-        }
-
-        check_coverage(&set_cover_0, &sets, &universe);
-        check_coverage(&set_cover_1, &sets, &universe);
-    }
-
-    #[test]
-    fn test_duplicate_sets() {
-        let mut sets = HashMap::new();
-        sets.insert(1, vec![1, 2, 3]);
-        sets.insert(2, vec![1, 2, 3]);
-        sets.insert(3, vec![4, 5, 6]);
-
-        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
-        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
-
-        assert!(set_cover_0.len() < sets.len());
-        assert!(set_cover_1.len() < sets.len());
+        assert_eq!(set_cover_0.len(), 3);
+        assert_eq!(set_cover_1.len(), 3);
 
         let universe = make_universe(&sets);
 
-        // Helper function to check coverage
-        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &AHashSet<i32>) {
-            let covered_sets: HashMap<i32, Vec<i32>> = cover
-                .iter()
-                .map(|&key| (key, sets.get(&key).unwrap().clone()))
-                .collect();
-            let covered_universe = make_universe(&covered_sets);
-            assert_eq!(universe, &covered_universe);
-        }
-
-        check_coverage(&set_cover_0, &sets, &universe);
-        check_coverage(&set_cover_1, &sets, &universe);
-    }
-
-    #[test]
-    fn test_one_element_per_set() {
-        let mut sets = HashMap::new();
-        sets.insert(1, vec![1]);
-        sets.insert(2, vec![2]);
-        sets.insert(3, vec![3]);
-        sets.insert(4, vec![4]);
-
-        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
-        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
-
-        assert_eq!(sets.len(), set_cover_0.len());
-        assert_eq!(sets.len(), set_cover_1.len());
-
-        let universe = make_universe(&sets);
-
-        // Helper function to check coverage
-        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &AHashSet<i32>) {
-            let covered_sets: HashMap<i32, Vec<i32>> = cover
-                .iter()
-                .map(|&key| (key, sets.get(&key).unwrap().clone()))
-                .collect();
-            let covered_universe = make_universe(&covered_sets);
-            assert_eq!(universe, &covered_universe);
-        }
-
-        check_coverage(&set_cover_0, &sets, &universe);
-        check_coverage(&set_cover_1, &sets, &universe);
-    }
-
-    #[test]
-    fn test_nested_sets() {
-        let mut sets = HashMap::new();
-        sets.insert(1, vec![1, 2, 3, 4, 5]);
-        sets.insert(2, vec![1, 2, 3]);
-        sets.insert(3, vec![1, 2]);
-
-        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
-        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
-
-        assert_eq!(set_cover_0.len(), 1);
-        assert_eq!(set_cover_1.len(), 1);
-
-        let universe = make_universe(&sets);
-
-        // Helper function to check coverage
-        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &AHashSet<i32>) {
-            let covered_sets: HashMap<i32, Vec<i32>> = cover
-                .iter()
-                .map(|&key| (key, sets.get(&key).unwrap().clone()))
-                .collect();
-            let covered_universe = make_universe(&covered_sets);
-            assert_eq!(universe, &covered_universe);
-        }
-
-        check_coverage(&set_cover_0, &sets, &universe);
-        check_coverage(&set_cover_1, &sets, &universe);
-    }
-
-    #[test]
-    fn test_large_number_of_small_sets() {
-        let mut sets = HashMap::new();
-        for i in 0..50 {
-            sets.insert(i, vec![i, i + 1]);
-        }
-
-        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
-        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
-
-        assert!(set_cover_0.len() < sets.len());
-        assert!(set_cover_1.len() < sets.len());
-
-        let universe = make_universe(&sets);
-
-        // Helper function to check coverage
         fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &AHashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
@@ -577,24 +356,20 @@ mod tests {
 
     #[test]
     fn test_complex_deterministic_cases() {
-        // Case 1: A clear greedy choice path
         let mut sets = HashMap::new();
         sets.insert(1, vec![1, 2, 3, 4, 5, 6]); // S1 (Best initial choice)
-        sets.insert(2, vec![1, 2, 7]); // S2
-        sets.insert(3, vec![3, 4, 8]); // S3
-        sets.insert(4, vec![5, 6, 9]); // S4
-        sets.insert(5, vec![7, 8, 9, 10]); // S5 (Best second choice)
+        sets.insert(2, vec![1, 2, 7]);
+        sets.insert(3, vec![3, 4, 8]);
+        sets.insert(4, vec![5, 6, 9]);
+        sets.insert(5, vec![7, 8, 9, 10]); // S5 (Best second choice to cover 7,8,9,10)
 
-        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
-        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
+        let set_cover_0 = greedy_set_cover(&sets, "greedy-standard".to_string());
+        let set_cover_1 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
 
-        // The optimal greedy cover is 2 sets: {1,2,3,4,5,6} and {7,8,9,10}
-        assert_eq!(set_cover_0.len(), 2);
-        assert_eq!(set_cover_1.len(), 2);
+        assert_eq!(set_cover_0, vec![1, 5]);
+        assert_eq!(set_cover_1, vec![1, 5]);
 
         let universe = make_universe(&sets);
-
-        // Helper function to check coverage
         fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &AHashSet<i32>) {
             let covered_sets: HashMap<i32, Vec<i32>> = cover
                 .iter()
@@ -610,39 +385,26 @@ mod tests {
 
     #[test]
     fn test_output_is_sorted() {
-        // Create a test case where the greedy algorithm might choose sets in any order
         let mut sets = HashMap::new();
         sets.insert(3, vec![1, 2, 3]);
         sets.insert(1, vec![4, 5, 6]);
         sets.insert(2, vec![7, 8, 9]);
         sets.insert(4, vec![10, 11, 12]);
 
-        let set_cover_0 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
-        let set_cover_1 = greedy_set_cover(&sets, "greedy-standard".to_string());
+        let set_cover_0 = greedy_set_cover(&sets, "greedy-standard".to_string());
+        let set_cover_1 = greedy_set_cover(&sets, "greedy-bitvec".to_string());
 
-        // Verify that both results are sorted
+        let expected = vec![1, 2, 3, 4];
+        assert_eq!(set_cover_0, expected);
+        assert_eq!(set_cover_1, expected);
+
         assert!(
             set_cover_0.windows(2).all(|w| w[0] <= w[1]),
-            "Output from greedy_set_cover_0 is not sorted"
+            "Output from greedy-standard is not sorted"
         );
         assert!(
             set_cover_1.windows(2).all(|w| w[0] <= w[1]),
-            "Output from greedy_set_cover_1 is not sorted"
+            "Output from greedy-bitvec is not sorted"
         );
-
-        // Also verify that the results are equivalent (cover the same elements)
-        let universe = make_universe(&sets);
-
-        fn check_coverage(cover: &[i32], sets: &HashMap<i32, Vec<i32>>, universe: &AHashSet<i32>) {
-            let covered_sets: HashMap<i32, Vec<i32>> = cover
-                .iter()
-                .map(|&key| (key, sets.get(&key).unwrap().clone()))
-                .collect();
-            let covered_universe = make_universe(&covered_sets);
-            assert_eq!(universe, &covered_universe);
-        }
-
-        check_coverage(&set_cover_0, &sets, &universe);
-        check_coverage(&set_cover_1, &sets, &universe);
     }
 }
