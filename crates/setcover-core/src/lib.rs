@@ -68,8 +68,8 @@ where
 
     // 4. Call the selected algorithm. It returns a HashSet of integer keys.
     let cover_int_set: AHashSet<usize> = match algo.as_str() {
-        "greedy-bitvec" => greedy_set_cover_1(&int_sets_vec, next_element_id),
-        "greedy-standard" => greedy_set_cover_0(&int_sets_vec),
+        "greedy-bitvec" => greedy_set_cover_bitvec(&int_sets_vec, next_element_id),
+        "greedy-standard" => greedy_set_cover_std(&int_sets_vec),
         _ => panic!("Wrong algo choice, must be 'greedy-bitvec' or 'greedy-standard'"),
     };
 
@@ -95,7 +95,7 @@ where
 /// # Returns
 ///
 /// An `AHashSet` containing the integer keys of the sets that form the cover.
-fn greedy_set_cover_1(sets: &Vec<Vec<usize>>, universe_size: usize) -> AHashSet<usize> {
+fn greedy_set_cover_bitvec(sets: &Vec<Vec<usize>>, universe_size: usize) -> AHashSet<usize> {
     if universe_size == 0 {
         return AHashSet::new();
     }
@@ -161,7 +161,7 @@ fn greedy_set_cover_1(sets: &Vec<Vec<usize>>, universe_size: usize) -> AHashSet<
 /// # Returns
 ///
 /// An `AHashSet` containing the integer keys of the sets that form the cover.
-fn greedy_set_cover_0(sets: &Vec<Vec<usize>>) -> AHashSet<usize> {
+fn greedy_set_cover_std(sets: &Vec<Vec<usize>>) -> AHashSet<usize> {
     let mut uncovered_elements: AHashSet<usize> = sets.iter().flatten().cloned().collect();
     let mut cover = AHashSet::new();
     let mut iterations = 0;
@@ -171,9 +171,10 @@ fn greedy_set_cover_0(sets: &Vec<Vec<usize>>) -> AHashSet<usize> {
         let mut max_covered = 0;
 
         for (key, set_elements) in sets.iter().enumerate() {
-            if cover.contains(&key) {
+            if cover.contains(&key) || set_elements.len() < max_covered {
                 continue;
             }
+
             let intersection_count = set_elements
                 .iter()
                 .filter(|e| uncovered_elements.contains(e))
@@ -235,8 +236,8 @@ where
 
     // 4. Call the selected algorithm
     let cover_int_set: AHashSet<usize> = match algo.as_str() {
-        "greedy-bitvec" => greedy_set_cover_1(&int_sets_vec, universe_size),
-        "greedy-standard" => greedy_set_cover_0(&int_sets_vec),
+        "greedy-bitvec" => greedy_set_cover_bitvec(&int_sets_vec, universe_size),
+        "greedy-standard" => greedy_set_cover_std(&int_sets_vec),
         _ => panic!("Wrong algo choice, must be 'greedy-bitvec' or 'greedy-standard'"),
     };
 
